@@ -58,7 +58,7 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-matita bg-[#fef9eb]/30">
       
-      {/* BANNER CON ALTURA FIJA PARA EVITAR EL BUG DE SALTO */}
+      {/* BANNER DINÁMICO */}
       <section className="w-full relative overflow-hidden bg-white h-[40vh] md:h-[450px]">
         {slides.map((slide, idx) => (
           <div 
@@ -91,15 +91,19 @@ const Layout: React.FC = () => {
         </div>
       </section>
 
-      {/* HEADER DINÁMICO STICKY */}
+      {/* HEADER STICKY CON FUENTE font-matita PARA EL NOMBRE EN NEGRO */}
       <header className={`sticky top-0 z-40 transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/30 shadow-sm ${isScrolled ? 'py-2' : 'py-5'}`}>
         <div className="container mx-auto px-6 flex items-center justify-between gap-8 max-w-[1920px]">
           
-          <NavLink to="/" className="flex items-center gap-3 shrink-0 group">
-            <div className={`bg-[#fadb31] rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all duration-500 ${isScrolled ? 'w-10 h-10' : 'w-16 h-16'}`}>
+          <NavLink to="/" className="flex items-center gap-4 shrink-0 group">
+            <div className={`bg-[#fadb31] rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all duration-500 ${isScrolled ? 'w-10 h-10' : 'w-14 h-14'}`}>
               <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
             </div>
-            <h1 className={`font-logo text-gray-800 transition-all duration-500 uppercase tracking-tighter ${isScrolled ? 'text-2xl' : 'text-6xl'}`}>MATITA</h1>
+            <div className="flex flex-col">
+              <h1 className={`font-matita text-gray-800 transition-all duration-500 uppercase leading-none tracking-wider ${isScrolled ? 'text-4xl' : 'text-6xl'}`}>
+                MATITA
+              </h1>
+            </div>
           </NavLink>
 
           <nav className="hidden lg:flex items-center justify-center gap-x-12 flex-grow">
@@ -179,12 +183,12 @@ const Layout: React.FC = () => {
           <div className="flex flex-col items-center justify-center space-y-4">
             <div 
               onClick={() => navigate('/admin')}
-              className="w-28 h-28 bg-white rounded-[2.5rem] flex items-center justify-center shadow-2xl border-4 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group"
+              className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group overflow-hidden"
             >
-              <span className="text-6xl group-hover:animate-bounce">✏️</span>
+              <img src={logoUrl} alt="Matita" className="w-16 h-16 object-contain" />
             </div>
-            <p className="font-logo text-5xl mt-4 uppercase tracking-wider text-white">MATITA</p>
-            <p className="text-xl font-bold opacity-80 uppercase tracking-widest text-white">"LIBRERÍA CON ALMA"</p>
+            <p className="font-logo text-6xl mt-4 uppercase tracking-wider text-white">MATITA</p>
+            <p className="text-lg font-bold opacity-80 uppercase tracking-[0.3em] text-white">"UNA LIBRERÍA CON ALMA"</p>
           </div>
 
           <div className="space-y-6">
@@ -203,7 +207,7 @@ const Layout: React.FC = () => {
 
         <div className="w-full h-12 bg-black/10 flex items-center justify-center">
           <p className="text-white text-[10px] font-bold uppercase tracking-[0.4em] opacity-80">
-            © 2026 MATITA LIBRERÍA • TODOS LOS DERECHOS RESERVADOS
+            © 2026 MATITA • TODOS LOS DERECHOS RESERVADOS
           </p>
         </div>
       </footer>
@@ -216,7 +220,7 @@ const Layout: React.FC = () => {
              <button onClick={() => setIsMenuOpen(false)} className="self-end text-6xl text-gray-200 hover:text-[#ea7e9c] transition-colors">×</button>
              <div className="flex flex-col gap-8">
                {navItems.map((item) => (
-                 <NavLink key={item.path} to={item.path} onClick={() => setIsMenuOpen(false)} className="text-3xl font-bold text-gray-600 hover:text-[#f6a118] transition-colors uppercase tracking-tighter">
+                 <NavLink key={item.path} to={item.path} onClick={() => setIsMenuOpen(false)} className="text-2xl font-bold text-gray-600 hover:text-[#f6a118] transition-colors uppercase tracking-tighter">
                    {item.label}
                  </NavLink>
                ))}
