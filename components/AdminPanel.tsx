@@ -226,6 +226,7 @@ const InventoryManager: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [formMode, setFormMode] = useState<'list' | 'edit'>('list');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProducts = async () => {
@@ -234,7 +235,8 @@ const InventoryManager: React.FC = () => {
       ...p, 
       oldPrice: p.old_price, 
       images: p.images || [], 
-      colors: p.colors || [] 
+      colors: p.colors || [],
+      description: p.description || ""
     })));
   };
 
@@ -262,26 +264,32 @@ const InventoryManager: React.FC = () => {
   const handleSave = async () => {
     if (!editingProduct?.name) return alert('¡Escribe el nombre del tesoro!');
     
-    const p = { 
-      name: editingProduct.name,
-      description: editingProduct.description || "",
-      price: Number(editingProduct.price) || 0,
-      old_price: Number(editingProduct.oldPrice) || 0,
-      points: Number(editingProduct.points) || 0,
-      category: editingProduct.category || "Escolar",
-      images: editingProduct.images || [],
-      colors: editingProduct.colors || [{color: 'Único', stock: 1}]
-    };
+    setIsSaving(true);
+    try {
+      const payload = { 
+        name: editingProduct.name,
+        description: editingProduct.description || "",
+        price: Number(editingProduct.price) || 0,
+        old_price: Number(editingProduct.oldPrice) || 0,
+        points: Number(editingProduct.points) || 0,
+        category: editingProduct.category || "Escolar",
+        images: editingProduct.images || [],
+        colors: editingProduct.colors || [{color: 'Único', stock: 1}]
+      };
 
-    const { error } = editingProduct.id 
-      ? await supabase.from('products').update(p).eq('id', editingProduct.id)
-      : await supabase.from('products').insert(p);
-    
-    if (error) alert("Error: " + error.message);
-    else {
-      alert('✨ ¡Stock actualizado!');
+      const { error } = editingProduct.id 
+        ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
+        : await supabase.from('products').insert(payload);
+      
+      if (error) throw error;
+
+      alert('✨ ¡Stock actualizado con éxito!');
       setFormMode('list'); 
       fetchProducts();
+    } catch (err: any) {
+      alert("Error al guardar: " + err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -296,6 +304,7 @@ const InventoryManager: React.FC = () => {
         body: formData,
       });
       const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
       return data.public_id;
     } catch (error) {
       console.error("Cloudinary error:", error);
@@ -307,12 +316,20 @@ const InventoryManager: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setIsUploading(true);
-    const newImages = [...(editingProduct?.images || [])];
+    const uploadedIds: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const publicId = await uploadImageToCloudinary(files[i]);
-      if (publicId) newImages.push(publicId);
+      if (publicId) uploadedIds.push(publicId);
     }
-    setEditingProduct(prev => ({ ...prev!, images: newImages }));
+    
+    setEditingProduct(prev => {
+      if (!prev) return null;
+      return { 
+        ...prev, 
+        images: [...(prev.images || []), ...uploadedIds] 
+      };
+    });
+    
     setIsUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -327,7 +344,7 @@ const InventoryManager: React.FC = () => {
           </div>
           <button 
             onClick={() => { 
-              setEditingProduct({ name: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{color: 'Único', stock: 10}], images: [] }); 
+              setEditingProduct({ name: '', description: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{color: 'Único', stock: 10}], images: [] }); 
               setFormMode('edit'); 
             }} 
             className="px-6 py-3 bg-[#f6a118] text-white rounded-2xl font-bold text-xl shadow-md hover:scale-105 transition-all uppercase"
@@ -356,14 +373,14 @@ const InventoryManager: React.FC = () => {
     <div className="space-y-8 animate-fadeIn max-w-4xl mx-auto">
       <div className="flex items-center gap-6">
         <button onClick={() => setFormMode('list')} className="text-4xl hover:scale-110 transition-all uppercase">🔙</button>
-        <h3 className="text-3xl font-bold text-gray-800 uppercase tracking-tighter">EDITOR DE STOCK</h3>
+        <h3 className="text-3xl font-bold text-gray-800 uppercase tracking-tighter">EDITOR DE PRODUCTO</h3>
       </div>
       
       <div className="bg-[#fef9eb] p-8 md:p-12 rounded-[3.5rem] border-4 border-white space-y-8 shadow-xl max-h-[85vh] overflow-y-auto scrollbar-hide">
         <div className="grid md:grid-cols-2 gap-6">
            <div className="space-y-1">
              <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Nombre del Tesoro</label>
-             <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.name} onChange={e => setEditingProduct({...editingProduct!, name: e.target.value})} />
+             <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.name || ''} onChange={e => setEditingProduct({...editingProduct!, name: e.target.value})} />
            </div>
            <div className="space-y-1">
              <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Categoría</label>
@@ -371,6 +388,16 @@ const InventoryManager: React.FC = () => {
                {['Escolar', 'Otros', 'Oficina', 'Tecnología', 'Novedades', 'Ofertas'].map(c => <option key={c} value={c}>{c}</option>)}
              </select>
            </div>
+        </div>
+
+        <div className="space-y-1">
+           <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Descripción del Producto 📖</label>
+           <textarea 
+             className="w-full text-xl p-6 rounded-[2rem] outline-none shadow-inner min-h-[150px] font-matita bg-white border-2 border-[#fadb31]/20" 
+             placeholder="Cuenta la historia de este producto..."
+             value={editingProduct?.description || ''} 
+             onChange={e => setEditingProduct({...editingProduct!, description: e.target.value})}
+           />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -411,18 +438,30 @@ const InventoryManager: React.FC = () => {
         </div>
 
         <div className="space-y-4">
+           <div className="flex flex-wrap gap-4 mb-4">
+              {editingProduct?.images?.map((img, idx) => (
+                <div key={idx} className="relative w-24 h-24 group">
+                  <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl border-2 border-white shadow-sm" />
+                  <button onClick={() => setEditingProduct({...editingProduct!, images: editingProduct.images?.filter((_, i) => i !== idx)})} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                </div>
+              ))}
+           </div>
            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} multiple accept="image/*" />
            <button 
              onClick={() => fileInputRef.current?.click()} 
              disabled={isUploading}
-             className="w-full py-8 bg-white border-4 border-dashed border-gray-200 text-gray-400 rounded-3xl text-xl font-bold hover:bg-gray-100 transition-all uppercase tracking-widest"
+             className="w-full py-8 bg-white border-4 border-dashed border-gray-200 text-gray-400 rounded-3xl text-xl font-bold hover:bg-gray-100 transition-all uppercase tracking-widest flex items-center justify-center gap-4"
            >
-             {isUploading ? '📤 SUBIENDO...' : '📸 SUBIR FOTOS'}
+             {isUploading ? <><div className="w-6 h-6 border-4 border-[#f6a118] border-t-transparent rounded-full animate-spin"></div> SUBIENDO...</> : '📸 SUBIR FOTOS'}
            </button>
         </div>
 
-        <button onClick={handleSave} className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-bold shadow-xl border-4 border-white hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-tighter">
-          ¡GUARDAR PRODUCTO! ✨
+        <button 
+          onClick={handleSave} 
+          disabled={isSaving}
+          className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-bold shadow-xl border-4 border-white hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-tighter disabled:opacity-50"
+        >
+          {isSaving ? "GUARDANDO..." : "¡GUARDAR PRODUCTO! ✨"}
         </button>
       </div>
     </div>
