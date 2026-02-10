@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from './ProductCard';
@@ -107,7 +108,8 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   return (
     <div className="space-y-12 animate-fadeIn pb-24 mt-8">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
-        <h2 className="text-6xl md:text-8xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-tighter">
+        {/* TITULO ACHICADO AQUÍ: de text-2xl/3xl a text-lg/xl */}
+        <h2 className="text-lg md:text-xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-widest">
           {getSectionTitle()}
         </h2>
         <div className="flex flex-col md:flex-row gap-4 w-full max-w-4xl">
@@ -190,4 +192,3 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
 };
 
 export default Catalog;
-
