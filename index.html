@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matita - Librería & Club</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Gochi+Hand&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --matita-beige: #fef9eb;
+            --matita-orange: #f6a118;
+            --matita-yellow: #fadb31;
+            --matita-pink: #ea7e9c;
+            --matita-cream: #fffaf0;
+        }
+        @font-face {
+            font-family: 'Segoe Print';
+            src: local('Segoe Print'), local('SegoePrint'), url('https://fonts.cdnfonts.com/s/14870/SegoePrint.woff') format('woff');
+        }
+        body {
+            font-family: 'Segoe Print', 'Patrick Hand', cursive;
+            background-color: var(--matita-beige);
+            background-image: 
+                linear-gradient(rgba(255, 250, 240, 0.8), rgba(255, 250, 240, 0.8)),
+                radial-gradient(var(--matita-yellow) 0.5px, transparent 0.5px);
+            background-size: 100% 100%, 30px 30px;
+            color: #4a4a4a;
+            font-size: 1.1rem;
+            min-height: 100vh;
+        }
+        .font-matita {
+            font-family: 'Segoe Print', 'Patrick Hand', cursive;
+        }
+        .font-logo {
+            font-family: 'Gochi Hand', cursive;
+        }
+        .matita-gradient-orange {
+            background: linear-gradient(135deg, var(--matita-orange), var(--matita-yellow));
+        }
+        .matita-gradient-pink {
+            background: linear-gradient(135deg, var(--matita-pink), var(--matita-yellow));
+        }
+        .shadow-matita {
+            box-shadow: 0 15px 35px -5px rgba(246, 161, 24, 0.2), 0 10px 15px -10px rgba(246, 161, 24, 0.1);
+        }
+        input, select, textarea {
+            background-color: #ffffff;
+            border-radius: 1.2rem;
+            padding: 0.8rem 1.2rem;
+            border: 2px solid #fadb31;
+            font-family: 'Segoe Print', 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+        }
+        button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        body { overflow-x: hidden; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
+    "recharts": "https://esm.sh/recharts@^2.12.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
