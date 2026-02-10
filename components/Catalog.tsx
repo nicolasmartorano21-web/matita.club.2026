@@ -77,11 +77,11 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   }, [category, searchTerm, favorites, products, sortBy]);
 
   const categoryList: {label: string, cat: Category, icon: string, route: string}[] = [
-    { label: 'ESCOLAR', cat: 'Escolar', icon: '✏️', route: '/escolar' },
+    { label: 'ESCOLAR', cat: 'Escolar', icon: '🎒', route: '/escolar' },
     { label: 'OFICINA', cat: 'Oficina', icon: '💼', route: '/oficina' },
     { label: 'TECNOLOGÍA', cat: 'Tecnología', icon: '🎧', route: '/tecnologia' },
     { label: 'NOVEDADES', cat: 'Novedades', icon: '✨', route: '/novedades' },
-    { label: 'OTROS', cat: 'Otros', icon: '🎁', route: '/otros' },
+    { label: 'OTROS', cat: 'Otros', icon: '📝', route: '/otros' },
     { label: 'OFERTAS', cat: 'Ofertas', icon: '🏷️', route: '/ofertas' }
   ];
 
@@ -190,3 +190,4 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
 };
 
 export default Catalog;
+
