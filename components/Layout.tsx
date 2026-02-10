@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
@@ -164,7 +165,7 @@ const Layout: React.FC = () => {
          <Cart />
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER CON LÁPIZ PARA ADMIN */}
       <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-24 pb-0 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-white/20 backdrop-blur-sm"></div>
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16 text-center md:text-left pb-12 relative z-10">
@@ -183,9 +184,9 @@ const Layout: React.FC = () => {
           <div className="flex flex-col items-center justify-center space-y-4">
             <div 
               onClick={() => navigate('/admin')}
-              className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group overflow-hidden"
+              className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group"
             >
-              <img src={logoUrl} alt="Matita" className="w-16 h-16 object-contain" />
+              <span className="text-6xl group-hover:rotate-12 transition-transform">✏️</span>
             </div>
             <p className="font-logo text-6xl mt-4 uppercase tracking-wider text-white">MATITA</p>
             <p className="text-lg font-bold opacity-80 uppercase tracking-[0.3em] text-white">"UNA LIBRERÍA CON ALMA"</p>
