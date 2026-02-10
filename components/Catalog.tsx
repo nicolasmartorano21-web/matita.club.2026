@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from './ProductCard';
@@ -19,7 +18,9 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProducts = async () => {
-    setLoading(true);
+    // Solo mostramos loading si no tenemos productos aún para evitar parpadeos en móvil
+    if (products.length === 0) setLoading(true);
+    
     try {
       const { data, error: fetchError } = await supabase
         .from('products')
@@ -29,30 +30,43 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
       if (fetchError) throw fetchError;
       
       if (data) {
-        setProducts(data.map((p: any) => ({
+        const mapped = data.map((p: any) => ({
           id: p.id,
           name: p.name,
-          description: p.description,
-          price: p.price,
-          oldPrice: p.old_price,
-          points: p.points,
+          description: p.description || "",
+          price: Number(p.price) || 0,
+          oldPrice: Number(p.old_price) || 0,
+          points: Number(p.points) || 0,
           category: p.category,
           images: p.images || [],
           colors: p.colors || []
-        })));
+        }));
+        setProducts(mapped);
       }
     } catch (err: any) {
       console.error("Error cargando productos:", err);
     } finally {
+      // Forzamos el fin del loading siempre para que el usuario vea algo
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchProducts();
-  }, [supabase]);
+    
+    // Suscripción en tiempo real opcional para que los cambios se vean al instante
+    const channel = supabase.channel('products-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchProducts();
+      })
+      .subscribe();
 
-  const normalize = (s: string | null | undefined) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []); // Solo al montar
+
+  const normalize = (s: string | null | undefined) => (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const sortedAndFilteredProducts = useMemo(() => {
     let filtered = products.filter(p => {
@@ -93,7 +107,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     return category.toUpperCase();
   };
 
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-40 gap-8">
         <div className="relative w-24 h-24">
@@ -108,7 +122,6 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   return (
     <div className="space-y-12 animate-fadeIn pb-24 mt-8">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
-        {/* TITULO ACHICADO AQUÍ: de text-2xl/3xl a text-lg/xl */}
         <h2 className="text-lg md:text-xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-widest">
           {getSectionTitle()}
         </h2>
