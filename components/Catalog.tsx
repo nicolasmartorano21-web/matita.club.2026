@@ -9,18 +9,21 @@ interface CatalogProps {
   category: Category | 'Catalog' | 'Favorites';
 }
 
+const CACHE_KEY = 'matita_products_cache';
+
 const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const { favorites, supabase } = useApp();
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    // Intentar cargar desde caché para visualización instantánea
+    const saved = localStorage.getItem(CACHE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'priceLow' | 'priceHigh' | 'name'>('recent');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(products.length === 0);
 
   const fetchProducts = async () => {
-    // Solo mostramos loading si no tenemos productos aún para evitar parpadeos en móvil
-    if (products.length === 0) setLoading(true);
-    
     try {
       const { data, error: fetchError } = await supabase
         .from('products')
@@ -42,11 +45,12 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
           colors: p.colors || []
         }));
         setProducts(mapped);
+        // Guardar en caché para la próxima vez
+        localStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
       }
     } catch (err: any) {
       console.error("Error cargando productos:", err);
     } finally {
-      // Forzamos el fin del loading siempre para que el usuario vea algo
       setLoading(false);
     }
   };
@@ -54,7 +58,6 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   useEffect(() => {
     fetchProducts();
     
-    // Suscripción en tiempo real opcional para que los cambios se vean al instante
     const channel = supabase.channel('products-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
         fetchProducts();
@@ -64,7 +67,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // Solo al montar
+  }, []);
 
   const normalize = (s: string | null | undefined) => (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -182,7 +185,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-16">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 md:gap-x-12 gap-y-8 md:gap-y-16">
         {sortedAndFilteredProducts.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
