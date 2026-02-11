@@ -6,7 +6,8 @@ import { useApp } from '../App';
 const getImgUrl = (id: string, w = 600) => {
   if (!id) return "https://via.placeholder.com/600x600?text=Matita";
   if (id.startsWith('data:') || id.startsWith('http')) return id;
-  return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto,f_auto,w_${w}/${id}`;
+  // Optimizamos calidad y formato automáticamente
+  return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto:good,f_auto,w_${w}/${id}`;
 };
 
 interface ProductCardProps {
@@ -35,33 +36,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <>
       <div 
         onClick={() => setShowModal(true)}
-        className="group bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
+        className="group bg-white rounded-[1.5rem] md:rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
       >
         <button 
           onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
-          className="absolute top-3 right-3 z-10 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110"
+          className="absolute top-2 right-2 md:top-3 md:right-3 z-10 w-8 h-8 md:w-9 md:h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110"
         >
-          <svg className={`w-5 h-5 ${isFavorite ? 'text-[#ea7e9c] fill-current' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-4 h-4 md:w-5 md:h-5 ${isFavorite ? 'text-[#ea7e9c] fill-current' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         </button>
 
-        <div className="relative aspect-[4/5] bg-[#fdfaf6] flex items-center justify-center p-4">
-          <img src={getImgUrl(product.images[0], 400)} className="w-full h-full object-contain transition-transform group-hover:scale-105" alt={product.name} />
+        <div className="relative aspect-[4/5] bg-[#fdfaf6] flex items-center justify-center p-2 md:p-4">
+          <img 
+            src={getImgUrl(product.images[0], 300)} 
+            className="w-full h-full object-contain transition-transform group-hover:scale-105" 
+            alt={product.name}
+            loading="lazy"
+          />
           {isGlobalOutOfStock && (
             <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center">
-              <span className="bg-gray-800/80 text-white text-xs px-4 py-1 rounded-full font-bold uppercase tracking-widest">Agotado</span>
+              <span className="bg-gray-800/80 text-white text-[10px] md:text-xs px-3 py-1 rounded-full font-bold uppercase tracking-widest">Agotado</span>
             </div>
           )}
         </div>
         
-        <div className="p-4 flex flex-col flex-grow bg-white">
-          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">{product.category}</p>
-          <h3 className="text-lg font-bold text-gray-800 line-clamp-2 leading-tight mb-2">{product.name}</h3>
+        <div className="p-3 md:p-4 flex flex-col flex-grow bg-white">
+          <p className="text-[8px] md:text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">{product.category}</p>
+          <h3 className="text-sm md:text-lg font-bold text-gray-800 line-clamp-2 leading-tight mb-2 uppercase">{product.name}</h3>
           <div className="mt-auto flex items-center justify-between">
-            <span className="text-xl font-bold text-[#f6a118]">${product.price.toLocaleString()}</span>
-            <div className="w-8 h-8 rounded-lg bg-[#fef9eb] text-[#fadb31] flex items-center justify-center border border-[#fadb31]/30">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={2.5}/></svg>
+            <span className="text-lg md:text-xl font-bold text-[#f6a118]">${product.price.toLocaleString()}</span>
+            <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-[#fef9eb] text-[#fadb31] flex items-center justify-center border border-[#fadb31]/30">
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={2.5}/></svg>
             </div>
           </div>
         </div>
@@ -96,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <div className="md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto scrollbar-hide bg-[#fdfaf6]">
               <div className="mb-6">
                  <p className="text-[#ea7e9c] font-bold text-[10px] uppercase tracking-widest mb-1">{product.category}</p>
-                 <h2 className="text-3xl font-bold text-gray-800 leading-tight mb-3">{product.name}</h2>
+                 <h2 className="text-3xl font-bold text-gray-800 leading-tight mb-3 uppercase">{product.name}</h2>
                  <p className="text-base text-gray-500 italic leading-relaxed">"{product.description || 'Producto seleccionado por Matita.'}"</p>
               </div>
 
