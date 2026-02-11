@@ -14,14 +14,27 @@ const CACHE_KEY = 'matita_products_cache';
 const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const { favorites, supabase } = useApp();
   const navigate = useNavigate();
+  
   const [products, setProducts] = useState<Product[]>(() => {
-    // Intentar cargar desde caché para visualización instantánea
-    const saved = localStorage.getItem(CACHE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(CACHE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'priceLow' | 'priceHigh' | 'name'>('recent');
   const [loading, setLoading] = useState(products.length === 0);
+
+  // PROTECCIÓN DE EMERGENCIA: Si tarda más de 8 segundos, forzamos el fin de la carga
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) setLoading(false);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const fetchProducts = async () => {
     try {
@@ -45,8 +58,11 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
           colors: p.colors || []
         }));
         setProducts(mapped);
-        // Guardar en caché para la próxima vez
-        localStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
+        } catch (e) {
+          console.warn("Storage lleno o bloqueado");
+        }
       }
     } catch (err: any) {
       console.error("Error cargando productos:", err);
@@ -73,7 +89,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
 
   const sortedAndFilteredProducts = useMemo(() => {
     let filtered = products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (p.name || "").toLowerCase().includes(searchTerm.toLowerCase());
       
       if (category === 'Favorites') return matchesSearch && favorites.includes(p.id);
       if (category === 'Catalog') return matchesSearch;
@@ -89,7 +105,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     return [...filtered].sort((a, b) => {
       if (sortBy === 'priceLow') return a.price - b.price;
       if (sortBy === 'priceHigh') return b.price - a.price;
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'name') return (a.name || "").localeCompare(b.name || "");
       return 0;
     });
   }, [category, searchTerm, favorites, products, sortBy]);
@@ -110,21 +126,30 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     return category.toUpperCase();
   };
 
+  // Pantalla de carga mejorada con botón de auxilio
   if (loading && products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-40 gap-8">
+      <div className="flex flex-col items-center justify-center py-40 gap-8 animate-fadeIn">
         <div className="relative w-24 h-24">
           <div className="absolute inset-0 border-8 border-gray-100 rounded-full"></div>
           <div className="absolute inset-0 border-8 border-transparent border-t-[#f6a118] rounded-full animate-spin"></div>
         </div>
-        <p className="text-[#f6a118] font-bold animate-pulse text-3xl text-center px-6 uppercase tracking-tighter">ABRIENDO EL MUNDO MATITA... ✨</p>
+        <div className="text-center space-y-4 px-6">
+          <p className="text-[#f6a118] font-bold animate-pulse text-2xl uppercase tracking-tighter">ABRIENDO EL MUNDO MATITA... ✨</p>
+          <button 
+            onClick={() => setLoading(false)}
+            className="text-gray-400 text-sm font-bold underline uppercase block mx-auto"
+          >
+            ¿Tarda mucho? Haz clic aquí 🏃‍♂️
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-12 animate-fadeIn pb-24 mt-8">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
+    <div className="space-y-8 md:space-y-12 animate-fadeIn pb-24 mt-4 md:mt-8">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 md:gap-10">
         <h2 className="text-lg md:text-xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-widest">
           {getSectionTitle()}
         </h2>
@@ -135,14 +160,14 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
               placeholder="BUSCAR TESOROS... 🔍"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-8 py-5 rounded-[2rem] border-4 border-[#fadb31]/30 text-xl font-matita shadow-lg focus:border-[#fadb31] focus:ring-[15px] focus:ring-[#fadb31]/5 outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
+              className="w-full px-6 py-4 md:px-8 md:py-5 rounded-[2rem] border-4 border-[#fadb31]/30 text-lg md:text-xl font-matita shadow-lg focus:border-[#fadb31] focus:ring-[15px] focus:ring-[#fadb31]/5 outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
             />
           </div>
           <div className="relative shrink-0">
              <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="appearance-none w-full px-8 py-5 pr-12 rounded-[2rem] border-4 border-[#fadb31]/30 text-lg font-bold text-gray-400 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-lg uppercase"
+              className="appearance-none w-full px-6 py-4 md:px-8 md:py-5 pr-12 rounded-[2rem] border-4 border-[#fadb31]/30 text-base md:text-lg font-bold text-gray-400 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-lg uppercase"
             >
               <option value="recent">RECIENTES ✨</option>
               <option value="priceLow">MENOR PRECIO ⬇️</option>
@@ -157,47 +182,47 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
       </div>
 
       <div className="w-full relative py-2 border-y-2 border-[#fadb31]/10">
-        <div className="flex overflow-x-auto gap-4 py-4 px-2 scrollbar-hide snap-x items-center -mx-4">
+        <div className="flex overflow-x-auto gap-3 py-3 px-2 scrollbar-hide snap-x items-center -mx-4">
            <button 
              onClick={() => navigate('/catalog')}
-             className={`snap-start px-8 py-3 rounded-full text-xl font-bold transition-all whitespace-nowrap border-2 flex items-center gap-3 uppercase ${
+             className={`snap-start px-6 py-2 md:px-8 md:py-3 rounded-full text-lg md:text-xl font-bold transition-all whitespace-nowrap border-2 flex items-center gap-2 md:gap-3 uppercase ${
                category === 'Catalog' 
                ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-lg scale-105' 
                : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
              }`}
            >
-             <span className="text-2xl">🌈</span> TODOS
+             <span className="text-xl md:text-2xl">🌈</span> TODOS
            </button>
 
            {categoryList.map(item => (
              <button 
                key={item.cat}
                onClick={() => navigate(item.route)}
-               className={`snap-start px-8 py-3 rounded-full text-xl font-bold transition-all whitespace-nowrap border-2 flex items-center gap-3 uppercase ${
+               className={`snap-start px-6 py-2 md:px-8 md:py-3 rounded-full text-lg md:text-xl font-bold transition-all whitespace-nowrap border-2 flex items-center gap-2 md:gap-3 uppercase ${
                  category === item.cat 
                  ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-lg scale-105' 
                  : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
                }`}
              >
-               <span className="text-2xl">{item.icon}</span> {item.label}
+               <span className="text-xl md:text-2xl">{item.icon}</span> {item.label}
              </button>
            ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 md:gap-x-12 gap-y-8 md:gap-y-16">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 md:gap-x-12 gap-y-6 md:gap-y-16">
         {sortedAndFilteredProducts.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
 
-      {sortedAndFilteredProducts.length === 0 && (
-        <div className="text-center py-40 flex flex-col items-center animate-fadeIn">
-          <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center text-7xl shadow-inner border-4 border-gray-50 mb-8 opacity-40">🔎</div>
-          <p className="text-3xl font-matita text-gray-300 italic px-6 uppercase tracking-tighter">"NO ENCONTRAMOS RESULTADOS PARA ESTA BÚSQUEDA."</p>
+      {sortedAndFilteredProducts.length === 0 && !loading && (
+        <div className="text-center py-24 md:py-40 flex flex-col items-center animate-fadeIn">
+          <div className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-full flex items-center justify-center text-5xl md:text-7xl shadow-inner border-4 border-gray-50 mb-8 opacity-40">🔎</div>
+          <p className="text-xl md:text-3xl font-matita text-gray-300 italic px-6 uppercase tracking-tighter">"NO ENCONTRAMOS RESULTADOS PARA ESTA BÚSQUEDA."</p>
           <button 
             onClick={() => {setSearchTerm(''); setSortBy('recent')}} 
-            className="mt-8 px-12 py-4 bg-[#fadb31] text-white rounded-full text-xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all uppercase"
+            className="mt-8 px-10 py-4 bg-[#fadb31] text-white rounded-full text-lg md:text-xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all uppercase"
           >
             LIMPIAR FILTROS ✨
           </button>
