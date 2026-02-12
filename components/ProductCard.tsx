@@ -1,12 +1,11 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../types';
 import { useApp } from '../App';
 
-const getImgUrl = (id: string, w = 400) => {
-  if (!id) return "https://via.placeholder.com/400x400?text=Matita";
+const getImgUrl = (id: string | undefined, w = 400) => {
+  if (!id || typeof id !== 'string') return "https://via.placeholder.com/600x600?text=Sin+Imagen";
   if (id.startsWith('data:') || id.startsWith('http')) return id;
-  // Optimizamos calidad para móviles (q_auto:eco es más rápido que good)
   return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto:eco,f_auto,w_${w}/${id}`;
 };
 
@@ -20,12 +19,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0]?.color || '');
   const [activeImage, setActiveImage] = useState(0);
 
+  const productImages = useMemo(() => 
+    (product.images || []).filter(img => img && typeof img === 'string' && img.trim() !== '')
+  , [product.images]);
+
   const isFavorite = (favorites || []).includes(product.id);
+  
   const currentStock = useMemo(() => 
     (product.colors || []).find(c => c.color === selectedColor)?.stock || 0
   , [selectedColor, product.colors]);
   
   const isGlobalOutOfStock = (product.colors || []).every(c => c.stock <= 0);
+
+  useEffect(() => {
+    if (showModal) {
+      setActiveImage(0);
+      // Bloquear scroll del body al abrir modal
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showModal]);
 
   const handleAddToCart = () => {
     if (currentStock > 0) {
@@ -36,6 +51,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <>
+      {/* CARD PRINCIPAL */}
       <div 
         onClick={() => setShowModal(true)}
         className="group bg-white rounded-[1.2rem] md:rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
@@ -49,100 +65,134 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </svg>
         </button>
 
-        <div className="relative aspect-square bg-[#fdfaf6] flex items-center justify-center p-2 md:p-4">
+        <div className="relative aspect-square bg-[#fdfaf6] flex items-center justify-center p-2 md:p-4 overflow-hidden">
           <img 
-            src={getImgUrl(product.images?.[0], 350)} 
-            className="w-full h-full object-contain transition-transform group-hover:scale-105" 
+            src={getImgUrl(productImages[0], 400)} 
+            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" 
             alt={product.name}
             loading="lazy"
-            decoding="async"
           />
           {isGlobalOutOfStock && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center">
-              <span className="bg-gray-800/80 text-white text-[9px] md:text-xs px-3 py-1 rounded-full font-bold uppercase tracking-widest">Agotado</span>
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center">
+              <span className="bg-gray-800/80 text-white text-[9px] md:text-xs px-3 py-1 rounded-full font-bold uppercase tracking-widest shadow-lg">Agotado</span>
             </div>
           )}
         </div>
         
         <div className="p-3 md:p-6 flex flex-col flex-grow bg-white">
-          <p className="text-[7px] md:text-[10px] text-[#f6a118] font-bold uppercase tracking-widest mb-1">{product.category}</p>
-          <h3 className="text-xs md:text-xl font-bold text-gray-800 line-clamp-2 leading-tight mb-2 uppercase">{product.name}</h3>
-          <div className="mt-auto flex items-center justify-between">
+          <p className="text-[8px] md:text-[10px] text-[#f6a118] font-bold uppercase tracking-widest mb-1">{product.category}</p>
+          <h3 className="text-sm md:text-xl font-bold text-gray-800 line-clamp-2 leading-tight mb-2 uppercase tracking-tighter">{product.name}</h3>
+          <div className="mt-auto flex items-center justify-between pt-2 border-t border-gray-50">
             <span className="text-base md:text-2xl font-bold text-gray-800">${(product.price || 0).toLocaleString()}</span>
-            <div className="w-7 h-7 md:w-10 md:h-10 rounded-full bg-[#fef9eb] text-[#fadb31] flex items-center justify-center border-2 border-[#fadb31]/30">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-[#fef9eb] text-[#f6a118] flex items-center justify-center border-2 border-[#fadb31]/30 transition-transform group-hover:scale-110">
               <svg className="w-4 h-4 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth={3}/></svg>
             </div>
           </div>
         </div>
       </div>
 
+      {/* MODAL DE DETALLE OPTIMIZADO */}
       {showModal && (
-        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#fdfaf6] w-full max-w-4xl max-h-[90vh] rounded-t-[2.5rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row">
+        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm animate-fadeIn overflow-hidden">
+          <div className="bg-[#fdfaf6] w-full max-w-4xl h-[92vh] md:h-auto md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3.5rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row transition-all">
             
-            <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 z-20 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all border-2 border-gray-100">
-              <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3}/></svg>
+            {/* BOTÓN CERRAR - Más accesible en móvil */}
+            <button 
+              onClick={() => setShowModal(false)} 
+              className="absolute top-4 right-4 z-[220] w-12 h-12 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-xl active:scale-90 transition-all border-2 border-gray-100"
+              aria-label="Cerrar"
+            >
+              <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3.5}/></svg>
             </button>
 
-            <div className="md:w-1/2 p-6 md:p-12 bg-white flex flex-col items-center">
-              <div className="w-full aspect-square bg-[#fdfaf6] rounded-[2rem] p-4 flex items-center justify-center overflow-hidden border-2 border-gray-50 mb-6">
-                <img src={getImgUrl(product.images?.[activeImage], 700)} className="max-w-full max-h-full object-contain" alt={product.name} />
+            {/* ÁREA DE IMAGEN - FIX BUG MÓVIL (Altura controlada) */}
+            <div className="h-[40vh] md:h-auto md:w-1/2 p-6 md:p-12 bg-white flex flex-col items-center justify-center relative border-b md:border-b-0 md:border-r border-gray-100 shrink-0">
+              <div className="w-full h-full md:aspect-square flex items-center justify-center overflow-hidden">
+                <img 
+                  key={activeImage}
+                  src={getImgUrl(productImages[activeImage], 800)} 
+                  className="max-w-full max-h-full object-contain animate-fadeIn drop-shadow-xl" 
+                  alt={product.name} 
+                />
               </div>
-              <div className="flex gap-2 mb-6">
-                {(product.images || []).map((_, i) => (
-                  <button key={i} onClick={() => setActiveImage(i)} className={`w-3 h-3 rounded-full transition-all ${activeImage === i ? 'bg-[#f6a118] w-8' : 'bg-gray-200'}`} />
-                ))}
-              </div>
-              <button 
-                onClick={handleAddToCart}
-                disabled={currentStock <= 0}
-                className={`w-full py-5 rounded-[2.5rem] text-xl font-bold shadow-xl active:scale-95 flex items-center justify-center gap-2 transition-all ${currentStock <= 0 ? 'bg-gray-100 text-gray-300' : 'matita-gradient-pink text-white hover:scale-[1.02]'}`}
-              >
-                {currentStock <= 0 ? 'Sin Stock' : 'Añadir al Carrito ✨'}
-              </button>
+              
+              {productImages.length > 1 && (
+                <div className="flex gap-2 mt-4 overflow-x-auto pb-2 px-2 scrollbar-hide max-w-full">
+                  {productImages.map((img, i) => (
+                    <button 
+                      key={i} 
+                      onClick={() => setActiveImage(i)} 
+                      className={`w-12 h-12 md:w-16 md:h-16 rounded-xl border-2 transition-all overflow-hidden shrink-0 ${
+                        activeImage === i ? 'border-[#f6a118] scale-105 shadow-md' : 'border-gray-100 opacity-50'
+                      }`}
+                    >
+                      <img src={getImgUrl(img, 150)} className="w-full h-full object-cover" alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="md:w-1/2 p-6 md:p-12 flex flex-col overflow-y-auto scrollbar-hide bg-[#fdfaf6]">
-              <div className="mb-8">
-                 <p className="text-[#ea7e9c] font-bold text-xs uppercase tracking-widest mb-1">{product.category}</p>
-                 <h2 className="text-3xl font-bold text-gray-800 leading-tight mb-4 uppercase">{product.name}</h2>
-                 <p className="text-lg text-gray-500 italic leading-relaxed">"{product.description || 'Una joyita seleccionada por Matita.'}"</p>
+            {/* ÁREA DE TEXTO - Scroll independiente */}
+            <div className="flex-grow md:w-1/2 p-6 md:p-12 flex flex-col overflow-y-auto scrollbar-hide bg-[#fdfaf6]">
+              <div className="mb-6">
+                 <p className="text-[#ea7e9c] font-bold text-[10px] uppercase tracking-[0.2em] mb-1">{product.category}</p>
+                 <h2 className="text-2xl md:text-4xl font-bold text-gray-800 leading-tight mb-3 uppercase tracking-tighter">{product.name}</h2>
+                 <p className="text-base md:text-lg text-gray-500 italic leading-relaxed border-l-4 border-[#fadb31] pl-4 py-1">
+                   {product.description || 'Una joyita seleccionada por Matita para llenar de magia tu escritorio.'}
+                 </p>
               </div>
 
-              <div className="mb-8">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Elige tu preferido:</p>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="mb-6">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Opciones disponibles:</p>
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   {(product.colors || []).map(c => (
                     <button 
                       key={c.color} 
                       onClick={() => c.stock > 0 && setSelectedColor(c.color)} 
-                      className={`relative p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                      className={`relative p-3 md:p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center ${
                         c.stock <= 0 
-                          ? 'bg-gray-50 text-gray-300 border-gray-100 opacity-50' 
+                          ? 'bg-gray-50 text-gray-300 border-gray-100 opacity-50 cursor-not-allowed' 
                           : selectedColor === c.color 
-                            ? 'bg-white border-[#f6a118] shadow-md' 
-                            : 'bg-white border-transparent'
+                            ? 'bg-white border-[#f6a118] shadow-md ring-2 ring-[#f6a118]/10' 
+                            : 'bg-white border-transparent shadow-sm'
                       }`}
                     >
+                      <span className={`text-sm md:text-base font-bold ${selectedColor === c.color ? 'text-[#f6a118]' : 'text-gray-700'}`}>{c.color}</span>
+                      <span className="text-[9px] font-bold uppercase opacity-30">Stock: {c.stock}</span>
                       {selectedColor === c.color && (
-                        <div className="absolute top-1 right-1 w-5 h-5 bg-[#f6a118] rounded-full flex items-center justify-center text-white text-[10px]">✓</div>
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#f6a118] rounded-full flex items-center justify-center text-white text-[10px] shadow-sm">✓</div>
                       )}
-                      <span className={`text-base font-bold ${selectedColor === c.color ? 'text-[#f6a118]' : 'text-gray-600'}`}>{c.color}</span>
-                      <span className="text-[10px] font-bold uppercase opacity-30">Stock: {c.stock}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-auto pt-8 border-t border-gray-200 flex justify-between items-end">
-                <div>
-                  <span className="text-4xl font-bold text-gray-800 leading-none">${(product.price || 0).toLocaleString()}</span>
-                  <p className="text-xs text-[#ea7e9c] font-bold mt-2">+ {product.points || 0} pts ✨</p>
+              <div className="mt-auto pt-6 border-t-2 border-dashed border-gray-100 flex flex-col gap-4 md:gap-6">
+                <div className="flex justify-between items-end">
+                  <div className="flex flex-col">
+                    <span className="text-4xl md:text-5xl font-bold text-gray-800 leading-none tracking-tighter">${(product.price || 0).toLocaleString()}</span>
+                    <p className="text-[10px] text-[#ea7e9c] font-bold mt-2 bg-[#ea7e9c]/10 px-3 py-1 rounded-full self-start inline-block">
+                      ✨ +{product.points || 0} pts
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Color</p>
+                    <p className="text-lg font-bold text-gray-800 uppercase truncate max-w-[120px]">{selectedColor || '-'}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Elegido</p>
-                  <p className="text-xl font-bold text-gray-800">{selectedColor || '-'}</p>
-                </div>
+
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={currentStock <= 0}
+                  className={`w-full py-5 rounded-full text-xl md:text-2xl font-bold shadow-xl active:scale-95 transition-all uppercase tracking-tighter ${
+                    currentStock <= 0 
+                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
+                      : 'matita-gradient-orange text-white hover:brightness-110 active:brightness-90'
+                  }`}
+                >
+                  {currentStock <= 0 ? 'Sin Stock temporal' : 'Añadir al Carrito ✨'}
+                </button>
               </div>
             </div>
           </div>
