@@ -283,7 +283,7 @@ const InventoryManager: React.FC = () => {
       
       if (error) throw error;
 
-      alert('✨ ¡Stock actualizado con éxito!');
+      alert('✨ ¡Sincronizado con éxito! PC y Celular actualizados.');
       setFormMode('list'); 
       fetchProducts();
     } catch (err: any) {
@@ -417,7 +417,7 @@ const InventoryManager: React.FC = () => {
 
         <div className="space-y-4">
            <div className="flex justify-between items-center px-4">
-             <h4 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Variantes</h4>
+             <h4 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Variantes y Stock</h4>
              <button onClick={() => setEditingProduct({...editingProduct!, colors: [...(editingProduct?.colors || []), {color: 'Nuevo', stock: 1}]})} className="text-[#f6a118] font-bold uppercase tracking-widest">+ AÑADIR</button>
            </div>
            <div className="grid gap-3">
@@ -426,12 +426,12 @@ const InventoryManager: React.FC = () => {
                   <input className="flex-grow border-none text-xl font-bold p-0 bg-transparent outline-none uppercase" value={c.color} onChange={e => {
                     const n = [...editingProduct.colors!]; n[i].color = e.target.value; setEditingProduct({...editingProduct, colors: n});
                   }} />
-                  <div className="flex items-center gap-4 bg-gray-50 px-4 py-1 rounded-full border">
-                    <button onClick={() => updateStock(i, -1)} className="text-3xl text-[#ea7e9c] font-bold">-</button>
-                    <span className="text-xl font-bold min-w-[2rem] text-center">{c.stock}</span>
-                    <button onClick={() => updateStock(i, 1)} className="text-3xl text-[#f6a118] font-bold">+</button>
+                  <div className="flex items-center gap-6 bg-gray-50 px-6 py-2 rounded-full border-2 border-gray-100">
+                    <button onClick={() => updateStock(i, -1)} className="text-4xl text-[#ea7e9c] font-bold active:scale-125 transition-transform">-</button>
+                    <span className="text-2xl font-bold min-w-[2.5rem] text-center">{c.stock}</span>
+                    <button onClick={() => updateStock(i, 1)} className="text-4xl text-[#f6a118] font-bold active:scale-125 transition-transform">+</button>
                   </div>
-                  <button onClick={() => setEditingProduct({...editingProduct, colors: editingProduct.colors?.filter((_, idx) => idx !== i)})} className="text-red-200">×</button>
+                  <button onClick={() => setEditingProduct({...editingProduct, colors: editingProduct.colors?.filter((_, idx) => idx !== i)})} className="text-red-200 text-3xl">×</button>
                </div>
              ))}
            </div>
