@@ -9,7 +9,7 @@ interface CatalogProps {
   category: Category | 'Catalog' | 'Favorites';
 }
 
-const CACHE_KEY = 'matita_products_cache';
+const CACHE_KEY = 'matita_products_cache_v2';
 
 const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const { favorites, supabase } = useApp();
@@ -26,17 +26,11 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'priceLow' | 'priceHigh' | 'name'>('recent');
-  const [loading, setLoading] = useState(products.length === 0);
-
-  // PROTECCIÓN DE EMERGENCIA: Si tarda más de 8 segundos, forzamos el fin de la carga
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (loading) setLoading(false);
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [loading]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(products.length === 0);
 
   const fetchProducts = async () => {
+    setIsSyncing(true);
     try {
       const { data, error: fetchError } = await supabase
         .from('products')
@@ -48,33 +42,32 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
       if (data) {
         const mapped = data.map((p: any) => ({
           id: p.id,
-          name: p.name,
+          name: p.name || "Producto sin nombre",
           description: p.description || "",
           price: Number(p.price) || 0,
           oldPrice: Number(p.old_price) || 0,
           points: Number(p.points) || 0,
-          category: p.category,
+          category: p.category || "Otros",
           images: p.images || [],
           colors: p.colors || []
         }));
+        
         setProducts(mapped);
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
-        } catch (e) {
-          console.warn("Storage lleno o bloqueado");
-        }
+        localStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
       }
     } catch (err: any) {
-      console.error("Error cargando productos:", err);
+      console.error("Error de sincronización:", err);
     } finally {
-      setLoading(false);
+      setIsSyncing(false);
+      setInitialLoad(false);
     }
   };
 
   useEffect(() => {
     fetchProducts();
     
-    const channel = supabase.channel('products-changes')
+    // SUSCRIPCIÓN EN TIEMPO REAL: Sincroniza PC y Móvil al instante
+    const channel = supabase.channel('realtime-products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
         fetchProducts();
       })
@@ -119,113 +112,72 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     { label: 'OFERTAS', cat: 'Ofertas', icon: '🏷️', route: '/ofertas' }
   ];
 
-  const getSectionTitle = () => {
-    if (category === 'Catalog') return 'EXPLORAR';
-    if (category === 'Favorites') return 'FAVORITOS';
-    if (normalize(category) === "otros") return 'OTROS';
-    return category.toUpperCase();
-  };
-
-  // Pantalla de carga mejorada con botón de auxilio
-  if (loading && products.length === 0) {
+  if (initialLoad) {
     return (
       <div className="flex flex-col items-center justify-center py-40 gap-8 animate-fadeIn">
-        <div className="relative w-24 h-24">
-          <div className="absolute inset-0 border-8 border-gray-100 rounded-full"></div>
-          <div className="absolute inset-0 border-8 border-transparent border-t-[#f6a118] rounded-full animate-spin"></div>
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-transparent border-t-[#f6a118] rounded-full animate-spin"></div>
         </div>
-        <div className="text-center space-y-4 px-6">
-          <p className="text-[#f6a118] font-bold animate-pulse text-2xl uppercase tracking-tighter">ABRIENDO EL MUNDO MATITA... ✨</p>
-          <button 
-            onClick={() => setLoading(false)}
-            className="text-gray-400 text-sm font-bold underline uppercase block mx-auto"
-          >
-            ¿Tarda mucho? Haz clic aquí 🏃‍♂️
-          </button>
-        </div>
+        <p className="text-[#f6a118] font-bold animate-pulse text-xl uppercase tracking-widest text-center px-8">
+          Preparando el catálogo... ✨
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 md:space-y-12 animate-fadeIn pb-24 mt-4 md:mt-8">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 md:gap-10">
-        <h2 className="text-lg md:text-xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-widest">
-          {getSectionTitle()}
+    <div className="space-y-6 md:space-y-10 animate-fadeIn pb-24 mt-2">
+      {/* Indicador de sincronización discreto para móvil */}
+      {isSyncing && products.length > 0 && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-[#f6a118] text-white px-4 py-1 rounded-full text-[10px] font-bold shadow-lg animate-bounce uppercase tracking-widest">
+          Actualizando stock... 🔄
+        </div>
+      )}
+
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <h2 className="text-base md:text-xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-[0.2em]">
+          {category === 'Catalog' ? 'EXPLORAR' : category === 'Favorites' ? 'FAVORITOS' : category.toUpperCase()}
         </h2>
-        <div className="flex flex-col md:flex-row gap-4 w-full max-w-4xl">
-          <div className="relative flex-grow">
-            <input
-              type="text"
-              placeholder="BUSCAR TESOROS... 🔍"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-6 py-4 md:px-8 md:py-5 rounded-[2rem] border-4 border-[#fadb31]/30 text-lg md:text-xl font-matita shadow-lg focus:border-[#fadb31] focus:ring-[15px] focus:ring-[#fadb31]/5 outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
-            />
-          </div>
-          <div className="relative shrink-0">
-             <select 
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="appearance-none w-full px-6 py-4 md:px-8 md:py-5 pr-12 rounded-[2rem] border-4 border-[#fadb31]/30 text-base md:text-lg font-bold text-gray-400 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-lg uppercase"
-            >
-              <option value="recent">RECIENTES ✨</option>
-              <option value="priceLow">MENOR PRECIO ⬇️</option>
-              <option value="priceHigh">MAYOR PRECIO ⬆️</option>
-              <option value="name">NOMBRE A-Z 📝</option>
-            </select>
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-[#f6a118]">
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth={3}/></svg>
-            </div>
-          </div>
+        <div className="flex flex-col md:flex-row gap-3 w-full max-w-4xl">
+          <input
+            type="text"
+            placeholder="¿Qué buscas hoy? 🔍"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-6 py-4 rounded-3xl border-2 border-[#fadb31]/20 text-lg shadow-sm focus:border-[#fadb31] outline-none bg-white uppercase"
+          />
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-6 py-4 rounded-3xl border-2 border-[#fadb31]/20 text-base font-bold text-gray-400 bg-white outline-none shadow-sm uppercase"
+          >
+            <option value="recent">RECIENTES ✨</option>
+            <option value="priceLow">MENOR PRECIO ⬇️</option>
+            <option value="priceHigh">MAYOR PRECIO ⬆️</option>
+            <option value="name">A-Z 📝</option>
+          </select>
         </div>
       </div>
 
-      <div className="w-full relative py-2 border-y-2 border-[#fadb31]/10">
-        <div className="flex overflow-x-auto gap-3 py-3 px-2 scrollbar-hide snap-x items-center -mx-4">
-           <button 
-             onClick={() => navigate('/catalog')}
-             className={`snap-start px-6 py-2 md:px-8 md:py-3 rounded-full text-lg md:text-xl font-bold transition-all whitespace-nowrap border-2 flex items-center gap-2 md:gap-3 uppercase ${
-               category === 'Catalog' 
-               ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-lg scale-105' 
-               : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
-             }`}
-           >
-             <span className="text-xl md:text-2xl">🌈</span> TODOS
-           </button>
-
-           {categoryList.map(item => (
-             <button 
-               key={item.cat}
-               onClick={() => navigate(item.route)}
-               className={`snap-start px-6 py-2 md:px-8 md:py-3 rounded-full text-lg md:text-xl font-bold transition-all whitespace-nowrap border-2 flex items-center gap-2 md:gap-3 uppercase ${
-                 category === item.cat 
-                 ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-lg scale-105' 
-                 : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
-               }`}
-             >
-               <span className="text-xl md:text-2xl">{item.icon}</span> {item.label}
-             </button>
-           ))}
+      <div className="w-full overflow-x-auto scrollbar-hide -mx-4 px-4 py-2">
+        <div className="flex gap-3">
+          <button onClick={() => navigate('/catalog')} className={`px-6 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap border-2 ${category === 'Catalog' ? 'bg-[#f6a118] text-white border-[#f6a118]' : 'bg-white text-gray-400 border-gray-100'}`}>🌈 TODOS</button>
+          {categoryList.map(item => (
+            <button key={item.cat} onClick={() => navigate(item.route)} className={`px-6 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap border-2 ${category === item.cat ? 'bg-[#f6a118] text-white border-[#f6a118]' : 'bg-white text-gray-400 border-gray-100'}`}>{item.icon} {item.label}</button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 md:gap-x-12 gap-y-6 md:gap-y-16">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
         {sortedAndFilteredProducts.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
 
-      {sortedAndFilteredProducts.length === 0 && !loading && (
-        <div className="text-center py-24 md:py-40 flex flex-col items-center animate-fadeIn">
-          <div className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-full flex items-center justify-center text-5xl md:text-7xl shadow-inner border-4 border-gray-50 mb-8 opacity-40">🔎</div>
-          <p className="text-xl md:text-3xl font-matita text-gray-300 italic px-6 uppercase tracking-tighter">"NO ENCONTRAMOS RESULTADOS PARA ESTA BÚSQUEDA."</p>
-          <button 
-            onClick={() => {setSearchTerm(''); setSortBy('recent')}} 
-            className="mt-8 px-10 py-4 bg-[#fadb31] text-white rounded-full text-lg md:text-xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all uppercase"
-          >
-            LIMPIAR FILTROS ✨
-          </button>
+      {sortedAndFilteredProducts.length === 0 && (
+        <div className="text-center py-20 opacity-40">
+          <p className="text-2xl font-matita italic uppercase">No encontramos nada... 🔎</p>
         </div>
       )}
     </div>
