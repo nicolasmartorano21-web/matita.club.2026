@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from './ProductCard';
@@ -13,13 +11,18 @@ interface CatalogProps {
 const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const { favorites, supabase } = useApp();
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
+  
+  // CARGA INTELIGENTE: Intentamos leer primero del caché local
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('matita_products_cache');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'priceLow' | 'priceHigh' | 'name'>('recent');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(products.length === 0);
 
   const fetchProducts = async () => {
-    setLoading(true);
     try {
       const { data, error: fetchError } = await supabase
         .from('products')
@@ -29,7 +32,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
       if (fetchError) throw fetchError;
       
       if (data) {
-        setProducts(data.map((p: any) => ({
+        const mapped = data.map((p: any) => ({
           id: p.id,
           name: p.name,
           description: p.description,
@@ -39,7 +42,9 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
           category: p.category,
           images: p.images || [],
           colors: p.colors || []
-        })));
+        }));
+        setProducts(mapped);
+        localStorage.setItem('matita_products_cache', JSON.stringify(mapped));
       }
     } catch (err: any) {
       console.error("Error cargando productos:", err);
@@ -50,6 +55,23 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
 
   useEffect(() => {
     fetchProducts();
+
+    // --- SINCRONIZACIÓN TOTAL (REALTIME) ---
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('✨ MATITA REALTIME: Actualizando catálogo...', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [supabase]);
 
   const normalize = (s: string | null | undefined) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -106,7 +128,8 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   }
 
   return (
-    <div className="space-y-12 animate-fadeIn pb-24 mt-8">
+    <div className="space-y-12 animate-fadeIn pb-24 mt-8 px-4">
+      {/* HEADER Y FILTROS */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
         <h2 className="text-6xl md:text-8xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-tighter">
           {getSectionTitle()}
@@ -118,7 +141,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
               placeholder="BUSCAR TESOROS... 🔍"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-8 py-5 rounded-[2rem] border-4 border-[#fadb31]/30 text-xl font-matita shadow-lg focus:border-[#fadb31] focus:ring-[15px] focus:ring-[#fadb31]/5 outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
+              className="w-full px-8 py-5 rounded-[2rem] border-4 border-[#fadb31]/30 text-xl font-matita shadow-lg focus:border-[#fadb31] outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
             />
           </div>
           <div className="relative shrink-0">
@@ -139,6 +162,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
         </div>
       </div>
 
+      {/* CATEGORÍAS TIPO BURBUJA */}
       <div className="w-full relative py-2 border-y-2 border-[#fadb31]/10">
         <div className="flex overflow-x-auto gap-4 py-4 px-2 scrollbar-hide snap-x items-center -mx-4">
            <button 
@@ -168,12 +192,14 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
         </div>
       </div>
 
+      {/* GRID DE PRODUCTOS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-16">
         {sortedAndFilteredProducts.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
 
+      {/* NO RESULTS */}
       {sortedAndFilteredProducts.length === 0 && (
         <div className="text-center py-40 flex flex-col items-center animate-fadeIn">
           <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center text-7xl shadow-inner border-4 border-gray-50 mb-8 opacity-40">🔎</div>
