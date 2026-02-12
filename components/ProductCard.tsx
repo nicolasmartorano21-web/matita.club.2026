@@ -48,7 +48,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <>
-      {/* VISTA PREVIA (CARD) */}
+      {/* CARD VISTA PREVIA */}
       <div 
         onClick={() => setShowModal(true)}
         className="group bg-white rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
@@ -67,7 +67,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             src={getImgUrl(productImages[0], 400)} 
             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
             alt={product.name}
-            loading="lazy"
           />
         </div>
         
@@ -83,134 +82,99 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
-      {/* MODAL CORREGIDO */}
+      {/* MODAL RECONSTRUIDO DESDE CERO */}
       {showModal && (
-        <div className="fixed inset-0 z-[1000] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-md p-0 md:p-6 animate-fadeIn">
+        <div className="fixed inset-0 z-[1000] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-md p-0 md:p-4">
           
           <div className="absolute inset-0" onClick={() => setShowModal(false)} />
 
           <div 
-            className="bg-[#fdfaf6] w-full h-[95%] md:h-auto md:max-h-[90vh] md:max-w-6xl md:rounded-[3rem] rounded-t-[2.5rem] shadow-2xl relative flex flex-col overflow-hidden animate-slideUp"
+            className="bg-[#fdfaf6] w-full h-[92vh] md:h-auto md:max-h-[90vh] md:max-w-5xl md:rounded-[3rem] rounded-t-[2.5rem] shadow-2xl relative flex flex-col overflow-hidden animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* HEADER DEL MODAL (Botón Cerrar) */}
-            <div className="flex justify-end p-4 md:p-6 shrink-0 z-50">
-                <button 
+            
+            {/* 1. HEADER FIJO */}
+            <div className="w-full flex justify-end p-4 md:p-6 shrink-0 z-[100]">
+              <button 
                 onClick={() => setShowModal(false)} 
-                className="w-10 h-10 md:w-12 md:h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl active:scale-90 border-2 border-gray-100"
-                >
-                <svg className="w-6 h-6 md:w-8 md:h-8 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3.5}/></svg>
-                </button>
+                className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center shadow-lg active:scale-90 border-2 border-gray-100"
+              >
+                <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3.5}/></svg>
+              </button>
             </div>
 
-            {/* AREA CENTRAL CON SCROLL - AQUÍ ESTABA EL ERROR */}
-            <div className="flex-1 overflow-y-auto px-6 md:px-14 pb-10 scrollbar-hide">
-              <div className="flex flex-col md:flex-row gap-8 md:gap-14">
+            {/* 2. CUERPO CON SCROLL REAL */}
+            <div className="flex-1 overflow-y-auto px-6 md:px-12 pb-10 scrollbar-hide">
+              <div className="flex flex-col md:flex-row gap-8">
                 
-                {/* LADO IZQUIERDO: IMAGEN */}
+                {/* IMAGEN */}
                 <div className="w-full md:w-1/2 flex flex-col items-center">
-                  <div className="w-full aspect-square relative flex items-center justify-center bg-white rounded-[2rem] p-6 shadow-inner">
+                  <div className="w-full aspect-square bg-white rounded-[2rem] p-4 flex items-center justify-center shadow-inner">
                     <img 
-                      key={activeImage}
                       src={getImgUrl(productImages[activeImage], 1000)} 
-                      className="max-w-full max-h-full object-contain animate-fadeIn drop-shadow-xl" 
+                      className="max-w-full max-h-full object-contain drop-shadow-xl" 
                       alt={product.name} 
                     />
                   </div>
-                  
                   {productImages.length > 1 && (
-                    <div className="flex gap-3 w-full overflow-x-auto scrollbar-hide py-4 justify-center">
+                    <div className="flex gap-2 mt-4 overflow-x-auto pb-2 w-full justify-center">
                       {productImages.map((img, i) => (
-                        <button 
-                          key={i} 
-                          onClick={() => setActiveImage(i)} 
-                          className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl border-4 transition-all shrink-0 ${
-                            activeImage === i ? 'border-[#fadb31] scale-105 shadow-md' : 'border-white opacity-40'
-                          }`}
-                        >
-                          <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl" alt="" />
+                        <button key={i} onClick={() => setActiveImage(i)} className={`w-14 h-14 rounded-xl border-4 shrink-0 ${activeImage === i ? 'border-[#fadb31]' : 'border-white'}`}>
+                          <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-lg" alt="" />
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* LADO DERECHO: DETALLES */}
-                <div className="w-full md:w-1/2 flex flex-col">
-                  <p className="text-[#ea7e9c] font-bold text-[10px] md:text-xs uppercase tracking-[0.4em] mb-2">{product.category}</p>
-                  <h2 className="text-3xl md:text-5xl font-bold text-gray-800 leading-tight mb-6 uppercase tracking-tighter">
-                    {product.name}
-                  </h2>
+                {/* TEXTOS */}
+                <div className="w-full md:w-1/2">
+                  <p className="text-[#ea7e9c] font-bold text-[10px] uppercase tracking-[0.3em] mb-2">{product.category}</p>
+                  <h2 className="text-3xl md:text-5xl font-bold text-gray-800 leading-tight mb-4 uppercase tracking-tighter">{product.name}</h2>
                   
-                  <div className="bg-white/90 p-6 md:p-8 rounded-[2rem] border-2 border-white shadow-sm mb-8">
-                    <p className="text-base md:text-xl text-gray-500 italic font-matita leading-relaxed">
-                      "{product.description || 'Este tesoro fue seleccionado por Matita para llenar de magia tu colección papeleril.'}"
-                    </p>
+                  <div className="bg-white/80 p-6 rounded-[2rem] border-2 border-white mb-6">
+                    <p className="text-base md:text-lg text-gray-500 italic font-matita">"{product.description}"</p>
                   </div>
 
                   <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">Elige tu favorito:</p>
-                    <div className="grid grid-cols-2 gap-3 pb-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Elige tu favorito:</p>
+                    <div className="grid grid-cols-2 gap-2">
                       {(product.colors || []).map(c => (
                         <button 
                           key={c.color} 
                           onClick={() => c.stock > 0 && setSelectedColor(c.color)} 
-                          className={`relative p-3 md:p-5 rounded-[1.5rem] border-[3px] transition-all text-center flex flex-col items-center gap-1 ${
-                            c.stock <= 0 
-                              ? 'bg-gray-100 text-gray-200 border-transparent opacity-40 cursor-not-allowed' 
-                              : selectedColor === c.color 
-                                ? 'bg-white border-[#fadb31] shadow-md scale-[1.02]' 
-                                : 'bg-white border-white hover:border-gray-100'
-                          }`}
+                          className={`p-3 rounded-2xl border-2 transition-all ${c.stock <= 0 ? 'opacity-30' : selectedColor === c.color ? 'bg-white border-[#fadb31] shadow-md' : 'bg-white border-transparent'}`}
                         >
-                          <span className={`text-sm md:text-base font-bold uppercase tracking-tighter ${selectedColor === c.color ? 'text-gray-900' : 'text-gray-400'}`}>{c.color}</span>
-                          <span className="text-[8px] md:text-[9px] font-bold opacity-30 uppercase tracking-widest">Stock: {c.stock}</span>
-                          {selectedColor === c.color && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#fadb31] rounded-full flex items-center justify-center text-gray-900 text-[10px] shadow-sm">✓</div>
-                          )}
+                          <span className="block text-sm font-bold uppercase">{c.color}</span>
+                          <span className="text-[8px] opacity-40 uppercase">Stock: {c.stock}</span>
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
 
-            {/* FOOTER FIJO ABAJO */}
-            <div className="shrink-0 w-full p-5 md:p-8 bg-white border-t-2 border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-              <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                
-                <div className="flex justify-between items-center w-full md:w-auto md:gap-10">
+            {/* 3. FOOTER FIJO ABAJO */}
+            <div className="w-full p-4 md:p-8 bg-white border-t-2 border-gray-50 shrink-0 z-[100]">
+              <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-4">
+                <div className="flex justify-between items-center w-full md:w-auto md:gap-8">
                   <div className="flex flex-col">
-                    <span className="text-3xl md:text-6xl font-bold text-gray-900 leading-none tracking-tighter">
-                      ${(product.price || 0).toLocaleString()}
-                    </span>
-                    <p className="text-[9px] md:text-[11px] text-[#ea7e9c] font-bold mt-1 uppercase tracking-widest">
-                      ✨ Sumás {product.points || 0} Matita Puntos
-                    </p>
+                    <span className="text-3xl md:text-5xl font-bold text-gray-900 tracking-tighter">${(product.price || 0).toLocaleString()}</span>
+                    <span className="text-[10px] text-[#ea7e9c] font-bold uppercase tracking-widest">✨ +{product.points} Puntos</span>
                   </div>
-                  <div className="text-right border-l-2 border-gray-100 pl-4 md:pl-10">
-                    <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">Elegido</p>
-                    <p className="text-lg md:text-xl font-bold text-[#f6a118] uppercase truncate max-w-[120px] tracking-tighter">{selectedColor || '---'}</p>
+                  <div className="text-right border-l-2 border-gray-100 pl-4">
+                    <p className="text-[10px] text-gray-300 font-bold uppercase">Color</p>
+                    <p className="text-lg font-bold text-[#f6a118] uppercase">{selectedColor || '---'}</p>
                   </div>
                 </div>
 
                 <button 
                   onClick={handleAddToCart}
                   disabled={currentStock <= 0}
-                  className={`w-full md:flex-grow py-4 md:py-6 rounded-full text-lg md:text-2xl font-bold shadow-xl active:scale-95 transition-all uppercase tracking-tighter border-4 border-white ${
-                    currentStock <= 0 
-                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
-                      : 'matita-gradient-orange text-white hover:brightness-105'
-                  }`}
+                  className={`w-full md:flex-grow py-4 md:py-6 rounded-full text-xl font-bold shadow-xl transition-all uppercase tracking-tighter border-4 border-white ${currentStock <= 0 ? 'bg-gray-100 text-gray-300' : 'matita-gradient-orange text-white'}`}
                 >
-                  {currentStock <= 0 ? 'Sin Stock' : (
-                    <div className="flex items-center justify-center gap-2">
-                      <span>Llevar a Casa</span>
-                      <span className="text-xl md:text-2xl">🛍️</span>
-                    </div>
-                  )}
+                  {currentStock <= 0 ? 'Sin Stock' : 'Llevar a Casa 🛍️'}
                 </button>
               </div>
             </div>
