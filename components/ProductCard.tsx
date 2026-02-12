@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../types';
 import { useApp } from '../App';
@@ -6,7 +7,7 @@ import { useApp } from '../App';
 const getImgUrl = (id: string | undefined, w = 400) => {
   if (!id || typeof id !== 'string') return "https://via.placeholder.com/600x600?text=Sin+Imagen";
   if (id.startsWith('data:') || id.startsWith('http')) return id;
-  return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto,f_auto,w_${w}/${id}`;
+  return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto:best,f_auto,w_${w}/${id}`;
 };
 
 interface ProductCardProps {
@@ -31,14 +32,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   
   const isGlobalOutOfStock = (product.colors || []).every(c => c.stock <= 0);
 
+  // Bloqueo de scroll del body al abrir modal
   useEffect(() => {
     if (showModal) {
       document.body.style.overflow = 'hidden';
-      setActiveImage(0);
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
     }
-    return () => { document.body.style.overflow = 'auto'; };
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
   }, [showModal]);
 
   const handleAddToCart = () => {
@@ -50,7 +59,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <>
-      {/* CARD PRINCIPAL - VISTA DE CUADRÍCULA */}
+      {/* CARD PRINCIPAL DEL CATÁLOGO */}
       <div 
         onClick={() => setShowModal(true)}
         className="group bg-white rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
@@ -90,108 +99,113 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
-      {/* MODAL - REDISEÑO TOTAL PARA MÓVIL (BOTTOM SHEET) */}
+      {/* MODAL - REDISEÑO PARA MÓVIL (SISTEMA DE SCROLL ÚNICO) */}
       {showModal && (
-        <div className="fixed inset-0 z-[1000] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div 
+          className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-6 animate-fadeIn"
+          onClick={() => setShowModal(false)}
+        >
+          {/* Contenedor del Modal */}
           <div 
-            className="bg-[#fdfaf6] w-full max-w-5xl h-[90vh] md:h-auto md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3.5rem] shadow-2xl relative flex flex-col overflow-hidden transition-transform animate-slideUp"
+            className="bg-[#fdfaf6] w-full max-w-4xl h-[92vh] md:h-auto md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] shadow-2xl relative flex flex-col overflow-hidden animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
-            
-            {/* BOTÓN CERRAR - SIEMPRE VISIBLE */}
+            {/* BOTÓN CERRAR - FLOTANTE ABSOLUTO */}
             <button 
               onClick={() => setShowModal(false)} 
-              className="absolute top-4 right-4 z-[1050] w-12 h-12 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-xl active:scale-90 border-2 border-gray-100"
+              className="absolute top-4 right-4 z-[2020] w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-xl active:scale-90 border-2 border-gray-100"
             >
               <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3.5}/></svg>
             </button>
 
-            {/* CONTENIDO SCROLLABLE */}
-            <div className="flex-grow overflow-y-auto scrollbar-hide">
-              <div className="flex flex-col md:flex-row">
+            {/* ÁREA DE CONTENIDO CON SCROLL FLUIDO */}
+            <div className="flex-grow overflow-y-auto scroll-smooth scrollbar-hide">
+              <div className="flex flex-col md:flex-row min-h-full">
                 
-                {/* ÁREA DE IMAGEN - SECCIÓN SUPERIOR EN MÓVIL */}
+                {/* LADO IZQUIERDO: IMAGEN */}
                 <div className="w-full md:w-1/2 bg-white shrink-0">
-                  <div className="w-full aspect-square flex items-center justify-center p-6 md:p-12 relative bg-white">
+                  <div className="w-full aspect-square relative bg-white flex items-center justify-center p-6 md:p-12">
                     <img 
                       key={activeImage}
                       src={getImgUrl(productImages[activeImage], 800)} 
-                      className="w-full h-full object-contain animate-fadeIn drop-shadow-xl" 
+                      className="max-w-full max-h-full object-contain animate-fadeIn drop-shadow-2xl" 
                       alt={product.name} 
                     />
                   </div>
                   
-                  {/* GALERÍA DE MINIATURAS */}
+                  {/* GALERÍA MINIATURAS (SCROLL HORIZONTAL) */}
                   {productImages.length > 1 && (
-                    <div className="w-full flex justify-center gap-3 p-4 bg-white overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-3 px-6 pb-6 overflow-x-auto scrollbar-hide justify-start md:justify-center">
                       {productImages.map((img, i) => (
                         <button 
                           key={i} 
                           onClick={() => setActiveImage(i)} 
-                          className={`w-14 h-14 rounded-xl border-4 transition-all shrink-0 shadow-sm ${
-                            activeImage === i ? 'border-[#f6a118] scale-105' : 'border-gray-50 opacity-60'
+                          className={`w-16 h-16 rounded-2xl border-4 transition-all shrink-0 shadow-sm ${
+                            activeImage === i ? 'border-[#f6a118] scale-105 shadow-md' : 'border-gray-50 opacity-40 grayscale hover:grayscale-0'
                           }`}
                         >
-                          <img src={getImgUrl(img, 150)} className="w-full h-full object-cover rounded-lg" alt="" />
+                          <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl" alt="" />
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* INFO DEL PRODUCTO */}
-                <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col bg-[#fdfaf6]">
-                  <div className="mb-6">
-                     <p className="text-[#ea7e9c] font-bold text-xs uppercase tracking-[0.2em] mb-1">{product.category}</p>
-                     <h2 className="text-3xl md:text-5xl font-bold text-gray-800 leading-tight mb-4 uppercase tracking-tighter">{product.name}</h2>
-                     <div className="bg-white/80 p-5 rounded-[1.5rem] border-2 border-white shadow-sm mb-6">
-                       <p className="text-base text-gray-500 italic leading-relaxed font-matita">
-                         {product.description || 'Una joyita elegida por Matita con todo el amor del mundo.'}
-                       </p>
+                {/* LADO DERECHO: INFORMACIÓN */}
+                <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-start">
+                   <div className="mb-8">
+                     <p className="text-[#ea7e9c] font-bold text-xs uppercase tracking-[0.3em] mb-2">{product.category}</p>
+                     <h2 className="text-3xl md:text-5xl font-bold text-gray-800 leading-tight mb-6 uppercase tracking-tighter">{product.name}</h2>
+                     <div className="bg-white/80 p-6 rounded-[2rem] border-2 border-white shadow-sm italic text-lg text-gray-500 leading-relaxed font-matita">
+                       "{product.description || 'Una pieza mágica elegida cuidadosamente para tu colección de Matita.'}"
                      </div>
-                  </div>
+                   </div>
 
-                  <div className="mb-6">
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Seleccioná tu favorito:</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(product.colors || []).map(c => (
-                        <button 
-                          key={c.color} 
-                          onClick={() => c.stock > 0 && setSelectedColor(c.color)} 
-                          className={`relative p-4 rounded-[1.8rem] border-4 transition-all flex flex-col items-center justify-center text-center ${
-                            c.stock <= 0 
-                              ? 'bg-gray-100 text-gray-300 border-transparent opacity-40 cursor-not-allowed' 
-                              : selectedColor === c.color 
-                                ? 'bg-white border-[#f6a118] shadow-md scale-[1.02]' 
-                                : 'bg-white border-white hover:border-gray-50 shadow-sm'
-                          }`}
-                        >
-                          <span className={`text-base font-bold uppercase tracking-tighter ${selectedColor === c.color ? 'text-[#f6a118]' : 'text-gray-700'}`}>{c.color}</span>
-                          <span className="text-[10px] font-bold opacity-30 uppercase">Stock: {c.stock}</span>
-                          {selectedColor === c.color && (
-                            <div className="absolute top-2 right-2 w-6 h-6 bg-[#f6a118] rounded-full flex items-center justify-center text-white text-[11px] shadow-sm">✓</div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* ESPACIADOR FINAL PARA MÓVIL (Para no tapar con el footer) */}
-                  <div className="h-32 md:hidden"></div>
+                   <div className="mb-10">
+                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <span className="w-2 h-2 bg-[#fadb31] rounded-full"></span> Seleccioná una opción:
+                     </p>
+                     <div className="grid grid-cols-2 gap-3">
+                       {(product.colors || []).map(c => (
+                         <button 
+                           key={c.color} 
+                           onClick={() => c.stock > 0 && setSelectedColor(c.color)} 
+                           className={`relative p-4 rounded-[1.8rem] border-4 transition-all flex flex-col items-center justify-center gap-1 ${
+                             c.stock <= 0 
+                               ? 'bg-gray-100 text-gray-300 border-transparent opacity-50 cursor-not-allowed' 
+                               : selectedColor === c.color 
+                                 ? 'bg-white border-[#f6a118] shadow-md scale-[1.02]' 
+                                 : 'bg-white border-white hover:border-gray-50 shadow-sm'
+                           }`}
+                         >
+                           <span className={`text-base font-bold uppercase tracking-tighter ${selectedColor === c.color ? 'text-[#f6a118]' : 'text-gray-700'}`}>{c.color}</span>
+                           <span className="text-[10px] font-bold opacity-30 uppercase">Stock: {c.stock}</span>
+                           {selectedColor === c.color && (
+                             <div className="absolute top-2 right-2 w-6 h-6 bg-[#f6a118] rounded-full flex items-center justify-center text-white text-[11px] shadow-sm animate-fadeIn">✓</div>
+                           )}
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* Espaciador para el pie sticky en móvil */}
+                   <div className="h-40 md:hidden"></div>
                 </div>
               </div>
             </div>
 
-            {/* PIE DE PÁGINA FIJO - SIEMPRE VISIBLE ABAJO */}
-            <div className="shrink-0 w-full p-6 md:p-10 bg-white border-t-2 border-gray-100 shadow-[0_-15px_40px_rgba(0,0,0,0.06)] z-[1040]">
-              <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="flex justify-between items-center w-full md:w-auto md:gap-12">
+            {/* PIE DE PÁGINA: STICKY COMPRA (Siempre visible) */}
+            <div className="sticky bottom-0 left-0 w-full p-6 md:p-10 bg-white border-t-2 border-gray-100 shadow-[0_-15px_40px_rgba(0,0,0,0.08)] z-[2010]">
+              <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex justify-between items-center w-full md:w-auto md:gap-10">
                   <div className="flex flex-col">
-                    <span className="text-4xl md:text-6xl font-bold text-gray-900 leading-none tracking-tighter">${(product.price || 0).toLocaleString()}</span>
-                    <p className="text-[11px] text-[#ea7e9c] font-bold mt-1 uppercase tracking-widest">✨ Sumás {product.points || 0} puntos</p>
+                    <span className="text-4xl md:text-7xl font-bold text-gray-900 leading-none tracking-tighter">${(product.price || 0).toLocaleString()}</span>
+                    <p className="text-[10px] text-[#ea7e9c] font-bold mt-1 uppercase tracking-widest flex items-center gap-1">
+                      ✨ Sumás {product.points || 0} pts
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest mb-1">Elegido</p>
+                    <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest leading-none mb-1">Color</p>
                     <p className="text-xl font-bold text-[#f6a118] uppercase truncate max-w-[120px]">{selectedColor || '---'}</p>
                   </div>
                 </div>
@@ -199,13 +213,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 <button 
                   onClick={handleAddToCart}
                   disabled={currentStock <= 0}
-                  className={`w-full md:flex-grow py-5 md:py-6 rounded-full text-xl md:text-3xl font-bold shadow-2xl active:scale-95 transition-all uppercase tracking-tighter border-4 border-white ${
+                  className={`w-full md:flex-grow py-5 md:py-6 rounded-full text-xl md:text-3xl font-bold shadow-2xl active:scale-95 transition-all uppercase tracking-tighter flex items-center justify-center gap-3 border-4 border-white ${
                     currentStock <= 0 
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                      : 'matita-gradient-orange text-white hover:brightness-105'
+                      : 'matita-gradient-orange text-white hover:brightness-105 active:brightness-90'
                   }`}
                 >
-                  {currentStock <= 0 ? '¡Se agotó! 😿' : 'Añadir al Carrito 🛍️'}
+                  {currentStock <= 0 ? '¡Sin Stock! 😿' : 'Añadir al Carrito 🛍️'}
                 </button>
               </div>
             </div>
