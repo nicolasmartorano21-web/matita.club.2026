@@ -69,11 +69,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             alt={product.name}
             loading="lazy"
           />
-          {isGlobalOutOfStock && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center">
-              <span className="bg-gray-800 text-white text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-widest shadow-lg">Agotado</span>
-            </div>
-          )}
         </div>
         
         <div className="p-4 flex flex-col flex-grow">
@@ -88,7 +83,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
-      {/* MODAL / BOTTOM SHEET */}
+      {/* MODAL CORREGIDO */}
       {showModal && (
         <div className="fixed inset-0 z-[1000] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-md p-0 md:p-6 animate-fadeIn">
           
@@ -98,37 +93,39 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             className="bg-[#fdfaf6] w-full h-[95%] md:h-auto md:max-h-[90vh] md:max-w-6xl md:rounded-[3rem] rounded-t-[2.5rem] shadow-2xl relative flex flex-col overflow-hidden animate-slideUp"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* BOTÓN CERRAR */}
-            <button 
-              onClick={() => setShowModal(false)} 
-              className="absolute top-4 right-4 z-[1200] w-10 h-10 md:w-12 md:h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl active:scale-90 border-2 border-gray-100 hover:bg-gray-50 transition-all"
-            >
-              <svg className="w-6 h-6 md:w-8 md:h-8 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3.5}/></svg>
-            </button>
+            {/* HEADER DEL MODAL (Botón Cerrar) */}
+            <div className="flex justify-end p-4 md:p-6 shrink-0 z-50">
+                <button 
+                onClick={() => setShowModal(false)} 
+                className="w-10 h-10 md:w-12 md:h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl active:scale-90 border-2 border-gray-100"
+                >
+                <svg className="w-6 h-6 md:w-8 md:h-8 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3.5}/></svg>
+                </button>
+            </div>
 
-            {/* CONTENIDO PRINCIPAL SCROLLEABLE */}
-            <div className="flex-grow overflow-y-auto scrollbar-hide">
-              <div className="flex flex-col md:flex-row min-h-full">
+            {/* AREA CENTRAL CON SCROLL - AQUÍ ESTABA EL ERROR */}
+            <div className="flex-1 overflow-y-auto px-6 md:px-14 pb-10 scrollbar-hide">
+              <div className="flex flex-col md:flex-row gap-8 md:gap-14">
                 
                 {/* LADO IZQUIERDO: IMAGEN */}
-                <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-center p-6 md:p-12">
-                  <div className="w-full aspect-square relative flex items-center justify-center mb-6">
+                <div className="w-full md:w-1/2 flex flex-col items-center">
+                  <div className="w-full aspect-square relative flex items-center justify-center bg-white rounded-[2rem] p-6 shadow-inner">
                     <img 
                       key={activeImage}
                       src={getImgUrl(productImages[activeImage], 1000)} 
-                      className="max-w-full max-h-[40vh] md:max-h-full object-contain animate-fadeIn drop-shadow-2xl" 
+                      className="max-w-full max-h-full object-contain animate-fadeIn drop-shadow-xl" 
                       alt={product.name} 
                     />
                   </div>
                   
                   {productImages.length > 1 && (
-                    <div className="flex gap-3 w-full overflow-x-auto scrollbar-hide pb-2 justify-center">
+                    <div className="flex gap-3 w-full overflow-x-auto scrollbar-hide py-4 justify-center">
                       {productImages.map((img, i) => (
                         <button 
                           key={i} 
                           onClick={() => setActiveImage(i)} 
                           className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl border-4 transition-all shrink-0 ${
-                            activeImage === i ? 'border-[#fadb31] scale-105 shadow-md' : 'border-gray-50 opacity-40 hover:opacity-100'
+                            activeImage === i ? 'border-[#fadb31] scale-105 shadow-md' : 'border-white opacity-40'
                           }`}
                         >
                           <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl" alt="" />
@@ -139,7 +136,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 </div>
 
                 {/* LADO DERECHO: DETALLES */}
-                <div className="w-full md:w-1/2 p-6 md:p-14 flex flex-col bg-[#fdfaf6]">
+                <div className="w-full md:w-1/2 flex flex-col">
                   <p className="text-[#ea7e9c] font-bold text-[10px] md:text-xs uppercase tracking-[0.4em] mb-2">{product.category}</p>
                   <h2 className="text-3xl md:text-5xl font-bold text-gray-800 leading-tight mb-6 uppercase tracking-tighter">
                     {product.name}
@@ -151,9 +148,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     </p>
                   </div>
 
-                  <div className="space-y-4 mb-32 md:mb-40"> {/* Padding extra para no chocar con el footer fijo */}
+                  <div className="space-y-4">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">Elige tu favorito:</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 pb-4">
                       {(product.colors || []).map(c => (
                         <button 
                           key={c.color} 
@@ -180,8 +177,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </div>
             </div>
 
-            {/* PIE DE PÁGINA FIJO */}
-            <div className="shrink-0 w-full p-5 md:p-8 bg-white border-t-2 border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-[1100]">
+            {/* FOOTER FIJO ABAJO */}
+            <div className="shrink-0 w-full p-5 md:p-8 bg-white border-t-2 border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
               <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                 
                 <div className="flex justify-between items-center w-full md:w-auto md:gap-10">
@@ -193,7 +190,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                       ✨ Sumás {product.points || 0} Matita Puntos
                     </p>
                   </div>
-                  <div className="text-right border-l-2 border-gray-50 pl-4 md:pl-10">
+                  <div className="text-right border-l-2 border-gray-100 pl-4 md:pl-10">
                     <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">Elegido</p>
                     <p className="text-lg md:text-xl font-bold text-[#f6a118] uppercase truncate max-w-[120px] tracking-tighter">{selectedColor || '---'}</p>
                   </div>
