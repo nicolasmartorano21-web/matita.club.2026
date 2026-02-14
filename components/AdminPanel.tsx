@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product, Category, User, Sale, ColorStock } from '../types';
@@ -72,7 +71,7 @@ const AdminPanel: React.FC = () => {
               { id: 'sales', label: '💸 Ventas' },
               { id: 'socios', label: '👥 Socios' },
               { id: 'ideas', label: '💡 Ideas' },
-              { id: 'design', label: '🎨 Marca' }
+              { id: 'design', label: '🎨 Marca' },
               { id: 'carousel', label: '🖼️ Carrusel' }
 
             ].map(tab => (
@@ -676,7 +675,6 @@ const DesignManager: React.FC = () => {
     </div>
   );
 };
-// ✅ SOLO AGREGA ESTO AL FINAL DE TU ARCHIVO ACTUAL (ANTES DEL export default)
 
 const CarouselManager: React.FC = () => {
   const { supabase } = useApp();
