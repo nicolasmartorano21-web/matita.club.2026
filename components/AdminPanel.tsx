@@ -670,5 +670,145 @@ const DesignManager: React.FC = () => {
     </div>
   );
 };
+// ✅ SOLO AGREGA ESTO AL FINAL DE TU ARCHIVO ACTUAL (ANTES DEL export default)
+
+const CarouselManager: React.FC = () => {
+  const { supabase } = useApp();
+  const [images, setImages] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchCarousel = async () => {
+      const { data } = await supabase
+        .from('site_config')
+        .select('carousel_images')
+        .eq('id', 'global')
+        .maybeSingle();
+
+      if (data?.carousel_images) {
+        setImages(data.carousel_images);
+      }
+    };
+
+    fetchCarousel();
+  }, [supabase]);
+
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "Matita_web");
+    formData.append("folder", "matita2026/carousel");
+
+    const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    return data.public_id;
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const newImages: string[] = [];
+    for (let i = 0; i < e.target.files.length; i++) {
+      const id = await uploadToCloudinary(e.target.files[i]);
+      if (id) newImages.push(id);
+    }
+
+    setImages(prev => [...prev, ...newImages]);
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveImage = (index: number, direction: number) => {
+    const newArr = [...images];
+    const target = index + direction;
+    if (target < 0 || target >= images.length) return;
+
+    [newArr[index], newArr[target]] = [newArr[target], newArr[index]];
+    setImages(newArr);
+  };
+
+  const saveCarousel = async () => {
+    setIsSaving(true);
+
+    await supabase.from('site_config').upsert({
+      id: 'global',
+      carousel_images: images
+    });
+
+    setIsSaving(false);
+    alert("✨ Carrusel actualizado correctamente");
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-10">
+      <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter text-center">
+        ADMINISTRAR CARRUSEL 🖼️
+      </h3>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        {images.map((img, i) => (
+          <div key={i} className="relative group">
+            <img
+              src={`https://res.cloudinary.com/dllm8ggob/image/upload/w_600/${img}`}
+              className="rounded-2xl object-cover aspect-square border-4 border-white shadow-md"
+            />
+
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2 rounded-2xl">
+              <button
+                onClick={() => moveImage(i, -1)}
+                className="bg-white px-3 py-1 rounded-full text-xs font-bold"
+              >
+                ⬆️
+              </button>
+              <button
+                onClick={() => moveImage(i, 1)}
+                className="bg-white px-3 py-1 rounded-full text-xs font-bold"
+              >
+                ⬇️
+              </button>
+              <button
+                onClick={() => removeImage(i)}
+                className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <input
+        type="file"
+        ref={fileRef}
+        className="hidden"
+        multiple
+        accept="image/*"
+        onChange={handleUpload}
+      />
+
+      <button
+        onClick={() => fileRef.current?.click()}
+        className="w-full py-6 border-4 border-dashed border-gray-300 rounded-3xl font-bold uppercase text-gray-400 hover:bg-gray-100"
+      >
+        📸 ABRIR GALERÍA Y AGREGAR IMÁGENES
+      </button>
+
+      <button
+        onClick={saveCarousel}
+        disabled={isSaving}
+        className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-xl uppercase"
+      >
+        {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
+      </button>
+    </div>
+  );
+};
 
 export default AdminPanel;
