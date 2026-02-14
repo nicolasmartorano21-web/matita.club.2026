@@ -15,7 +15,10 @@ const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'sales' | 'socios' | 'ideas' | 'design'>('dashboard');
+  const [activeTab, setActiveTab] = useState<
+  'dashboard' | 'inventory' | 'sales' | 'socios' | 'ideas' | 'design' | 'carousel'
+>('dashboard');
+
 
   const handleAdminAuth = (e: React.FormEvent) => {
     e.preventDefault();
