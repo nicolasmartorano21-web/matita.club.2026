@@ -70,6 +70,8 @@ const AdminPanel: React.FC = () => {
               { id: 'socios', label: '👥 Socios' },
               { id: 'ideas', label: '💡 Ideas' },
               { id: 'design', label: '🎨 Marca' }
+              { id: 'carousel', label: '🖼️ Carrusel' }
+
             ].map(tab => (
               <button 
                 key={tab.id} 
@@ -96,6 +98,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'socios' && <SociosManager />}
         {activeTab === 'ideas' && <IdeasManager />}
         {activeTab === 'design' && <DesignManager />}
+        {activeTab === 'carousel' && <CarouselManager />}
       </div>
     </div>
   );
