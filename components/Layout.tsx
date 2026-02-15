@@ -1,45 +1,75 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
 import Cart from './Cart';
 
 const Layout: React.FC = () => {
-  const { user, setUser, clearCart, logoUrl } = useApp();
+  const { user, setUser, clearCart, logoUrl, supabase } = useApp();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  // Estado para las imágenes dinámicas del carrusel
+  const [banners, setBanners] = useState<string[]>([
+    "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=2000&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?q=80&w=2000&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1586075010633-2a420b91e1d7?q=80&w=2000&auto=format&fit=crop"
+  ]);
 
-  const slides = [
-    {
-      url: "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=2000&auto=format&fit=crop",
-      color: "border-[#fadb31]"
-    },
-    {
-      url: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?q=80&w=2000&auto=format&fit=crop",
-      color: "border-[#ea7e9c]"
-    },
-    {
-      url: "https://images.unsplash.com/photo-1586075010633-2a420b91e1d7?q=80&w=2000&auto=format&fit=crop",
-      color: "border-[#f6a118]"
+  const getImgFullUrl = (id: string) => {
+    if (!id) return "";
+    if (id.startsWith('http')) return id;
+    return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto:best,f_auto,w_2000/${id}`;
+  };
+
+  const fetchBanners = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_config')
+        .select('carousel_images')
+        .eq('id', 'global')
+        .maybeSingle();
+
+      if (data?.carousel_images && Array.isArray(data.carousel_images) && data.carousel_images.length > 0) {
+        setBanners(data.carousel_images);
+      }
+    } catch (err) {
+      console.error("Error al cargar banners:", err);
     }
-  ];
+  };
 
   useEffect(() => {
+    fetchBanners();
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
     window.addEventListener('scroll', handleScroll);
+
+    // Timer para el carrusel (usa banners.length para el ciclo)
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
+      setBanners(prev => {
+        if (prev.length > 0) {
+          setCurrentSlide((curr) => (curr + 1) % prev.length);
+        }
+        return prev;
+      });
     }, 6000);
+
+    // Escuchar cambios en tiempo real de la configuración
+    const channel = supabase
+      .channel('layout-config')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_config' }, fetchBanners)
+      .subscribe();
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       clearInterval(timer);
+      supabase.removeChannel(channel);
     };
-  }, [slides.length]);
+  }, [supabase]);
 
   const handleLogout = () => {
     setUser(null);
@@ -59,9 +89,9 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-matita bg-[#fef9eb]/30">
       
-      {/* BANNER DINÁMICO */}
+      {/* BANNER DINÁMICO (Ahora sincronizado con Admin) */}
       <section className="w-full relative overflow-hidden bg-white h-[40vh] md:h-[450px]">
-        {slides.map((slide, idx) => (
+        {banners.map((url, idx) => (
           <div 
             key={idx} 
             className={`absolute inset-0 transition-opacity duration-[2000ms] ease-in-out ${
@@ -69,7 +99,7 @@ const Layout: React.FC = () => {
             }`}
           >
             <img 
-              src={slide.url} 
+              src={getImgFullUrl(url)} 
               className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
                 idx === currentSlide ? 'scale-110' : 'scale-100'
               }`} 
@@ -80,7 +110,7 @@ const Layout: React.FC = () => {
         ))}
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-20">
-          {slides.map((_, idx) => (
+          {banners.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
@@ -92,13 +122,13 @@ const Layout: React.FC = () => {
         </div>
       </section>
 
-      {/* HEADER STICKY CON FUENTE font-matita PARA EL NOMBRE EN NEGRO */}
+      {/* HEADER STICKY */}
       <header className={`sticky top-0 z-40 transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/30 shadow-sm ${isScrolled ? 'py-2' : 'py-5'}`}>
         <div className="container mx-auto px-6 flex items-center justify-between gap-8 max-w-[1920px]">
           
           <NavLink to="/" className="flex items-center gap-4 shrink-0 group">
             <div className={`bg-[#fadb31] rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all duration-500 ${isScrolled ? 'w-10 h-10' : 'w-14 h-14'}`}>
-              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+              <img src={getImgFullUrl(logoUrl)} alt="Logo" className="w-full h-full object-contain p-1" />
             </div>
             <div className="flex flex-col">
               <h1 className={`font-matita text-gray-800 transition-all duration-500 uppercase leading-none tracking-wider ${isScrolled ? 'text-4xl' : 'text-6xl'}`}>
@@ -165,7 +195,7 @@ const Layout: React.FC = () => {
          <Cart />
       </div>
 
-      {/* FOOTER CON LÁPIZ PARA ADMIN */}
+      {/* FOOTER */}
       <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-24 pb-0 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-white/20 backdrop-blur-sm"></div>
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16 text-center md:text-left pb-12 relative z-10">
