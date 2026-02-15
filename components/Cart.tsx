@@ -13,7 +13,6 @@ const getImgUrl = (id: string, w = 150) => {
 
 /**
  * Métodos de pago ajustados. 
- * Se añade el detalle de comisión para Tarjeta/Link.
  */
 const PAYMENT_METHODS = [
   { 
@@ -112,7 +111,7 @@ const Cart: React.FC = () => {
         (isGift ? `🎁 *Envoltorio Regalo:* Sí (+$${GIFT_WRAP_PRICE.toLocaleString()})\n` : '') +
         `\n💰 *TOTAL BASE: $${summary.finalTotal.toLocaleString()}*\n` +
         `💳 *MÉTODO PAGO:* ${selectedPayInfo?.label}\n` +
-        (paymentMethod === 'tarjeta' ? `⚠️ _Sujeto a comisión según banco_\n` : '') +
+        (paymentMethod === 'tarjeta' ? `⚠️ _Sujeto a comisión según banco (Se abona en librería)_\n` : '') +
         (paymentMethod === 'transferencia' ? `🏦 *ALIAS:* Matita.2020.mp / Matita.2023\n` : '') +
         `📍 *RETIRO:* Altos de la Calera, Córdoba.\n\n` +
         `¿Tienen stock de todo? ¡Gracias! 🌸`;
@@ -254,8 +253,8 @@ const Cart: React.FC = () => {
 
             {/* Footer */}
             {cart.length > 0 && (
-              <div className="p-8 md:p-10 bg-white border-t-2 border-gray-50 rounded-t-[4rem] shadow-xl space-y-6 shrink-0 z-10">
-                <div className="space-y-2 border-b border-gray-50 pb-4">
+              <div className="p-8 md:p-10 bg-white border-t-2 border-gray-50 rounded-t-[4rem] shadow-xl space-y-4 shrink-0 z-10">
+                <div className="space-y-1 border-b border-gray-50 pb-4">
                   <div className="flex justify-between text-gray-400 font-bold uppercase text-[10px]">
                     <span>Subtotal</span>
                     <span>${summary.subtotal.toLocaleString()}</span>
@@ -282,13 +281,29 @@ const Cart: React.FC = () => {
                   <span className="text-6xl md:text-7xl font-bold tracking-tighter text-[#f6a118]">${summary.finalTotal.toLocaleString()}</span>
                 </div>
 
-                <button 
-                  onClick={handleCheckout} 
-                  disabled={isProcessing}
-                  className={`w-full py-7 rounded-full font-bold uppercase tracking-[0.3em] text-2xl shadow-xl transition-all ${isProcessing ? 'bg-gray-100 text-gray-400' : 'matita-gradient-pink text-white active:scale-95'}`}
-                >
-                  {isProcessing ? "Procesando..." : "Confirmar Reserva ✨"}
-                </button>
+                <div className="space-y-3">
+                  <button 
+                    onClick={handleCheckout} 
+                    disabled={isProcessing}
+                    className={`w-full py-7 rounded-full font-bold uppercase tracking-[0.3em] text-2xl shadow-xl transition-all ${isProcessing ? 'bg-gray-100 text-gray-400' : 'matita-gradient-pink text-white active:scale-95'}`}
+                  >
+                    {isProcessing ? "Procesando..." : "Confirmar Reserva ✨"}
+                  </button>
+
+                  {/* NOTAS DE PAGO DINÁMICAS */}
+                  <div className="flex items-center justify-center gap-2 px-4 animate-fadeIn">
+                    {paymentMethod === 'transferencia' && (
+                      <p className="text-[11px] text-gray-500 font-medium text-center leading-tight">
+                        <span className="text-[#f6a118] font-bold uppercase">¡Recordá!</span> Envianos el comprobante por WhatsApp para agilizar tu pedido. 🏦
+                      </p>
+                    )}
+                    {paymentMethod === 'tarjeta' && (
+                      <p className="text-[11px] text-gray-500 font-medium text-center leading-tight">
+                        <span className="text-[#ea7e9c] font-bold uppercase">Aviso:</span> El pago con tarjeta se realiza <span className="underline">únicamente en la librería</span>. 💳
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
