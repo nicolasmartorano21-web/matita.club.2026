@@ -17,21 +17,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.color || '');
   const [activeImage, setActiveImage] = useState(0);
+  const [quantity, setQuantity] = useState(1); // Nuevo estado para cantidad
 
   const isFavorite = favorites.includes(product.id);
   const currentStock = useMemo(() => product.colors.find(c => c.color === selectedColor)?.stock || 0, [selectedColor, product.colors]);
   const isGlobalOutOfStock = product.colors.every(c => c.stock <= 0);
 
+  // Resetear cantidad al cambiar de color para evitar errores de stock
+  const handleColorChange = (color: string, stock: number) => {
+    if (stock > 0) {
+      setSelectedColor(color);
+      setQuantity(1); 
+    }
+  };
+
   const handleAddToCart = () => {
-    if (currentStock > 0) {
-      addToCart({ product, quantity: 1, selectedColor });
+    if (currentStock >= quantity) {
+      addToCart({ product, quantity, selectedColor });
       setShowModal(false);
-      alert(`¡${product.name} (${selectedColor}) añadido! 🌸`);
+      setQuantity(1); // Reset para la próxima apertura
+      alert(`¡${quantity}x ${product.name} (${selectedColor}) añadido! 🌸`);
     }
   };
 
   return (
     <>
+      {/* CARD PRINCIPAL */}
       <div 
         onClick={() => setShowModal(true)}
         className="group bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
@@ -66,6 +77,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
+      {/* MODAL DE DETALLE */}
       {showModal && (
         <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-[#fdfaf6] w-full max-w-4xl max-h-[95vh] rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row border-t-8 md:border-8 border-white">
@@ -83,6 +95,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   <button key={i} onClick={() => setActiveImage(i)} className={`w-3 h-3 rounded-full transition-all ${activeImage === i ? 'bg-[#f6a118] w-8' : 'bg-gray-200'}`} />
                 ))}
               </div>
+
+              {/* SELECTOR DE CANTIDAD */}
+              {currentStock > 0 && (
+                <div className="flex items-center gap-6 mb-6 bg-gray-50 px-6 py-3 rounded-full border-2 border-white shadow-inner">
+                  <button 
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="text-3xl font-bold text-[#ea7e9c] hover:scale-125 transition-transform"
+                  >-</button>
+                  <div className="flex flex-col items-center">
+                    <span className="text-2xl font-bold text-gray-800 leading-none">{quantity}</span>
+                    <span className="text-[8px] font-bold text-gray-400 uppercase">Cantidad</span>
+                  </div>
+                  <button 
+                    onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
+                    className="text-3xl font-bold text-[#f6a118] hover:scale-125 transition-transform"
+                  >+</button>
+                </div>
+              )}
+
               <button 
                 onClick={handleAddToCart}
                 disabled={currentStock <= 0}
@@ -105,7 +136,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   {product.colors.map(c => (
                     <button 
                       key={c.color} 
-                      onClick={() => c.stock > 0 && setSelectedColor(c.color)} 
+                      onClick={() => handleColorChange(c.color, c.stock)} 
                       className={`relative p-3 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
                         c.stock <= 0 
                           ? 'bg-gray-50 text-gray-300 border-gray-100 opacity-50' 
@@ -126,11 +157,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
               <div className="mt-auto pt-6 border-t border-white/50 flex justify-between items-end">
                 <div>
-                  <span className="text-4xl font-bold text-[#f6a118]">${product.price.toLocaleString()}</span>
-                  <p className="text-[10px] text-[#ea7e9c] font-bold">+ {product.points} pts ✨</p>
+                  <span className="text-4xl font-bold text-[#f6a118]">${(product.price * quantity).toLocaleString()}</span>
+                  <p className="text-[10px] text-[#ea7e9c] font-bold">+ {product.points * quantity} pts ✨</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[8px] text-gray-300 font-bold uppercase tracking-widest">Seleccionado</p>
+                  <p className="text-[8px] text-gray-300 font-bold uppercase tracking-widest">Variante</p>
                   <p className="text-lg font-bold text-gray-800">{selectedColor || '-'}</p>
                 </div>
               </div>
