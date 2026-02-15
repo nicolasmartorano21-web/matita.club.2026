@@ -13,7 +13,6 @@ const getImgUrl = (id: string | undefined, w = 250) => {
 
 /**
  * CONFIGURACIÓN DE MÉTODOS DE PAGO CON "CARTELITOS"
- * Aquí definimos los colores y mensajes de los avisos dinámicos.
  */
 const PAYMENT_METHODS = [
   { 
@@ -72,25 +71,6 @@ const Cart: React.FC = () => {
     };
   }, [cart, user, usePoints, isGift]);
 
-  const updateQuantity = (index: number, delta: number) => {
-    setCart(prev => {
-      const updated = [...prev];
-      const item = { ...updated[index] };
-      const variant = item.product.colors.find(c => c.color === item.selectedColor);
-      const stock = variant ? variant.stock : 0;
-      const nextQty = item.quantity + delta;
-
-      if (nextQty < 1) return prev;
-      if (nextQty > stock) {
-        alert(`¡Ups! Solo quedan ${stock} unidades. ✨`);
-        return prev;
-      }
-      item.quantity = nextQty;
-      updated[index] = item;
-      return updated;
-    });
-  };
-
   /**
    * handleCheckout: AQUÍ SE PROCESA EL DESCUENTO DE STOCK Y LA VENTA
    */
@@ -101,7 +81,7 @@ const Cart: React.FC = () => {
     try {
       const selectedPay = PAYMENT_METHODS.find(p => p.id === paymentMethod);
       
-      // 1. DESCUENTO DE STOCK REAL EN BASE DE DATOS
+      // DESCUENTO DE STOCK REAL: Buscamos el producto y restamos la cantidad del color elegido.
       for (const item of cart) {
         const { data: currentProd } = await supabase
           .from('products')
@@ -121,7 +101,6 @@ const Cart: React.FC = () => {
         }
       }
 
-      // 2. REGISTRO DE LA VENTA (PARA GRÁFICOS DEL ADMIN)
       await supabase.from('sales').insert({
         total: summary.finalTotal,
         user_name: user?.name || 'Invitado',
@@ -129,12 +108,10 @@ const Cart: React.FC = () => {
         created_at: new Date().toISOString()
       });
 
-      // 3. DESCUENTO DE PUNTOS
       if (user && usePoints && summary.pointsToDeduct > 0) {
         await supabase.from('users').update({ points: Math.max(0, user.points - summary.pointsToDeduct) }).eq('id', user.id);
       }
 
-      // 4. ENVÍO A WHATSAPP
       const detail = cart.map(i => `• *${i.product.name}* (${i.selectedColor}) x${i.quantity}`).join('\n');
       const waMsg = 
         `*✨ NUEVA RESERVA - MATITA BOUTIQUE ✨*\n` +
@@ -150,7 +127,7 @@ const Cart: React.FC = () => {
       
       clearCart();
       setIsOpen(false);
-      alert("¡Reserva confirmada y stock descontado con éxito! ✨");
+      alert("¡Reserva confirmada con éxito! ✨");
 
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -178,95 +155,95 @@ const Cart: React.FC = () => {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={() => setIsOpen(false)}></div>
-          <div className="fixed right-0 top-0 h-full w-full sm:w-[38rem] bg-[#fdfaf6] shadow-2xl z-[200] flex flex-col border-l-[12px] border-[#fadb31] animate-slideUp overflow-hidden">
+          
+          {/* ANCHO REDUCIDO EN PC: De 32rem a 25rem para que sea más elegante */}
+          <div className="fixed right-0 top-0 h-full w-full sm:w-[28rem] lg:w-[25rem] bg-[#fdfaf6] shadow-2xl z-[200] flex flex-col border-l-[10px] border-[#fadb31] animate-slideUp overflow-hidden">
             
-            <div className="p-8 md:p-10 matita-gradient-orange text-white flex justify-between items-center shrink-0">
+            <div className="p-5 md:p-6 matita-gradient-orange text-white flex justify-between items-center shrink-0">
               <div className="flex flex-col">
-                <h3 className="text-4xl md:text-5xl font-logo uppercase tracking-tighter leading-none">Mi Bolsa.</h3>
-                <p className="text-[10px] uppercase font-bold tracking-[0.4em] opacity-80 mt-1">Librería & Club Matita</p>
+                <h3 className="text-2xl md:text-3xl font-logo uppercase tracking-tighter leading-none">Mi Bolsa.</h3>
+                <p className="text-[9px] uppercase font-bold tracking-[0.4em] opacity-80 mt-1">Librería & Club Matita</p>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-transform p-3 bg-white/20 rounded-full active:scale-90">
-                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3}/></svg>
+              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-transform p-2 bg-white/20 rounded-full active:scale-90">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3}/></svg>
               </button>
             </div>
 
-            <div className="flex-grow overflow-y-auto p-6 md:p-8 space-y-10 scrollbar-hide">
+            <div className="flex-grow overflow-y-auto p-4 md:p-5 space-y-5 scrollbar-hide">
               {cart.length === 0 ? (
-                <div className="text-center py-40 flex flex-col items-center opacity-40">
-                  <div className="text-[10rem] mb-6 animate-pulse">🛒</div>
-                  <p className="text-3xl font-bold italic text-gray-400 font-matita">Tu bolsa está vacía...</p>
+                <div className="text-center py-16 flex flex-col items-center opacity-40">
+                  <div className="text-6xl mb-4">🛒</div>
+                  <p className="text-xl font-bold italic text-gray-400 font-matita">Tu bolsa está vacía...</p>
                 </div>
               ) : (
                 <>
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-4">Items en la bolsa:</p>
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-2">Tesoro seleccionado:</p>
                     {cart.map((item, idx) => (
-                      <div key={`${item.product.id}-${idx}`} className="bg-white p-5 rounded-[2.5rem] shadow-sm border-2 border-white flex gap-5 items-center relative animate-fadeIn group">
-                        <div className="w-20 h-20 bg-[#fef9eb] rounded-2xl overflow-hidden flex items-center justify-center border border-gray-50">
-                          <img src={getImgUrl(item.product.images[0], 150)} className="w-full h-full object-contain p-2" />
+                      <div key={`${item.product.id}-${idx}`} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex gap-3 items-center relative animate-fadeIn group">
+                        <div className="w-14 h-14 bg-[#fef9eb] rounded-xl overflow-hidden flex items-center justify-center border border-gray-50 shrink-0">
+                          <img src={getImgUrl(item.product.images[0], 150)} className="w-full h-full object-contain p-1.5" />
                         </div>
                         <div className="flex-grow min-w-0">
-                          <h4 className="text-lg font-bold text-gray-800 leading-tight truncate font-matita uppercase">{item.product.name}</h4>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Color: <span className="text-[#f6a118]">{item.selectedColor}</span></p>
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-4 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
-                               <button onClick={() => updateQuantity(idx, -1)} className="text-2xl font-bold text-[#ea7e9c] hover:scale-125 transition-transform">-</button>
-                               <span className="text-xl font-bold w-6 text-center text-gray-600 font-matita">{item.quantity}</span>
-                               <button onClick={() => updateQuantity(idx, 1)} className="text-2xl font-bold text-[#f6a118] hover:scale-125 transition-transform">+</button>
+                          <h4 className="text-sm font-bold text-gray-800 leading-tight truncate font-matita uppercase">{item.product.name}</h4>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Color: <span className="text-[#f6a118]">{item.selectedColor}</span></p>
+                          <div className="flex justify-between items-center mt-1">
+                            <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-100">
+                               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Cant:</span>
+                               <span className="text-sm font-bold text-gray-600 font-matita">{item.quantity}</span>
                             </div>
-                            <span className="text-2xl font-bold text-[#f6a118] tracking-tighter">${(item.product.price * item.quantity).toLocaleString()}</span>
+                            <span className="text-lg font-bold text-[#f6a118] tracking-tighter">${(item.product.price * item.quantity).toLocaleString()}</span>
                           </div>
                         </div>
-                        <button onClick={() => removeFromCart(idx)} className="absolute -top-2 -right-2 bg-white text-red-200 w-10 h-10 rounded-full shadow-lg border border-gray-50 flex items-center justify-center text-2xl">×</button>
+                        <button onClick={() => removeFromCart(idx)} className="absolute -top-1.5 -right-1.5 bg-white text-red-300 w-6 h-6 rounded-full shadow-sm border border-gray-100 flex items-center justify-center text-xl hover:text-red-500 transition-colors">×</button>
                       </div>
                     ))}
                   </div>
 
                   {user && user.isSocio && user.points > 0 && (
-                    <div className="space-y-4 pt-4 border-t-2 border-gray-50">
-                       <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-4">Club Matita ✨</p>
-                       <div className={`p-6 rounded-[2.5rem] border-2 transition-all flex items-center justify-between shadow-sm ${usePoints ? 'bg-white border-[#fadb31] ring-4 ring-[#fadb31]/5' : 'bg-transparent border-gray-200 opacity-60'}`}>
-                         <div className="flex items-center gap-4">
-                            <span className="text-4xl">✨</span>
+                    <div className="space-y-1.5 pt-3 border-t border-gray-50">
+                       <div className={`p-3 rounded-2xl border transition-all flex items-center justify-between shadow-sm ${usePoints ? 'bg-white border-[#fadb31]' : 'bg-transparent border-gray-100 opacity-60'}`}>
+                         <div className="flex items-center gap-2.5">
+                            <span className="text-2xl">✨</span>
                             <div className="text-left">
-                               <p className="text-lg font-bold text-gray-800">Canjear mis puntos ({user.points})</p>
-                               <p className="text-xs font-bold text-[#f6a118] uppercase tracking-tighter">Descuento: -${summary.pointsDiscount.toLocaleString()}</p>
+                               <p className="text-xs font-bold text-gray-800">Canjear puntos ({user.points})</p>
+                               <p className="text-[9px] font-bold text-[#f6a118] uppercase tracking-tighter">Descuento: -${summary.pointsDiscount.toLocaleString()}</p>
                             </div>
                          </div>
-                         <button onClick={() => setUsePoints(!usePoints)} className={`w-14 h-7 rounded-full flex items-center px-1 transition-colors ${usePoints ? 'bg-[#f6a118]' : 'bg-gray-300'}`}>
-                           <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${usePoints ? 'translate-x-7' : ''}`} />
+                         <button onClick={() => setUsePoints(!usePoints)} className={`w-10 h-5 rounded-full flex items-center px-0.5 transition-colors ${usePoints ? 'bg-[#f6a118]' : 'bg-gray-300'}`}>
+                           <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform ${usePoints ? 'translate-x-5' : ''}`} />
                          </button>
                        </div>
                     </div>
                   )}
 
-                  <div className="space-y-4">
-                    <div className={`p-6 rounded-[2.5rem] border-2 transition-all flex items-center justify-between shadow-sm ${isGift ? 'bg-white border-[#ea7e9c] ring-4 ring-[#ea7e9c]/5' : 'bg-transparent border-gray-200 opacity-60'}`}>
-                      <div className="flex items-center gap-4">
-                        <span className="text-4xl">🎁</span>
+                  <div className="space-y-1.5">
+                    <div className={`p-3 rounded-2xl border transition-all flex items-center justify-between shadow-sm ${isGift ? 'bg-white border-[#ea7e9c]' : 'bg-transparent border-gray-100 opacity-60'}`}>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">🎁</span>
                         <div className="text-left">
-                          <p className="text-lg font-bold text-gray-800">¿Es para regalo? (+$2.000)</p>
-                          <p className="text-xs font-bold text-[#ea7e9c] uppercase tracking-tighter">Incluye bolsa matita y tarjetita</p>
+                          <p className="text-xs font-bold text-gray-800">¿Para regalo? (+$2.000)</p>
+                          <p className="text-[9px] font-bold text-[#ea7e9c] uppercase tracking-tighter">Pack especial matita</p>
                         </div>
                       </div>
-                      <button onClick={() => setIsGift(!isGift)} className={`w-14 h-7 rounded-full flex items-center px-1 transition-colors ${isGift ? 'bg-[#ea7e9c]' : 'bg-gray-300'}`}>
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${isGift ? 'translate-x-6' : ''}`} />
+                      <button onClick={() => setIsGift(!isGift)} className={`w-10 h-5 rounded-full flex items-center px-0.5 transition-colors ${isGift ? 'bg-[#ea7e9c]' : 'bg-gray-300'}`}>
+                        <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform ${isGift ? 'translate-x-5' : ''}`} />
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid gap-3 pb-32">
-                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-4">Método de Pago:</p>
+                  <div className="grid gap-1.5 pb-16">
+                    <p className="text-[9px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-2">Cómo vas a pagar:</p>
                     {PAYMENT_METHODS.map(p => (
                       <button 
                         key={p.id} 
                         onClick={() => setPaymentMethod(p.id)} 
-                        className={`w-full p-6 rounded-[2.5rem] border-2 transition-all flex items-center gap-5 shadow-sm ${paymentMethod === p.id ? 'bg-white border-[#fadb31] ring-4 ring-[#fadb31]/10' : 'bg-transparent border-white text-gray-400 opacity-60'}`}
+                        className={`w-full p-3.5 rounded-2xl border transition-all flex items-center gap-3.5 shadow-sm ${paymentMethod === p.id ? 'bg-white border-[#fadb31] ring-2 ring-[#fadb31]/5' : 'bg-transparent border-transparent text-gray-400 opacity-60'}`}
                       >
-                        <span className="text-4xl">{p.icon}</span>
+                        <span className="text-2xl">{p.icon}</span>
                         <div className="text-left">
-                          <p className="text-xl font-bold text-gray-800 leading-none mb-1">{p.label}</p>
-                          <p className="text-xs font-medium text-gray-400 italic">{p.detail}</p>
+                          <p className="text-sm font-bold text-gray-800 leading-none mb-1 uppercase tracking-tighter">{p.label}</p>
+                          <p className="text-[9px] font-medium text-gray-400 italic leading-none">{p.detail}</p>
                         </div>
                       </button>
                     ))}
@@ -275,37 +252,37 @@ const Cart: React.FC = () => {
               )}
             </div>
 
+            {/* SECCIÓN FINALIZAR COMPRA COMPACTADA */}
             {cart.length > 0 && (
-              <div className="p-8 md:p-10 bg-white border-t-[8px] border-[#fef9eb] rounded-t-[4rem] shadow-xl space-y-6 shrink-0 z-10">
-                
-                {/* CARTELITO NOTORIO DINÁMICO */}
-                <div className={`p-6 rounded-[2.5rem] border-2 animate-fadeIn transition-all duration-500 shadow-inner ${
+              <div className="p-5 md:p-6 bg-white border-t-[6px] border-[#fef9eb] rounded-t-[2.5rem] shadow-xl space-y-3 shrink-0 z-10">
+                <div className={`p-3 rounded-xl border animate-fadeIn transition-all duration-500 ${
                   PAYMENT_METHODS.find(p => p.id === paymentMethod)?.alertBg
                 }`}>
-                  <div className="flex items-center gap-4">
-                    <span className="text-4xl">📢</span>
-                    <p className="text-base font-bold italic leading-tight uppercase tracking-tight">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">📢</span>
+                    <p className="text-[9px] font-bold italic leading-tight uppercase tracking-tight">
                       {PAYMENT_METHODS.find(p => p.id === paymentMethod)?.info}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center px-1">
                   <div className="flex flex-col">
-                    <span className="text-4xl md:text-5xl font-logo text-gray-800">Total</span>
-                    <span className="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Sujeto a Stock Real</span>
+                    <span className="text-xl md:text-2xl font-logo text-gray-800 leading-none">Total</span>
+                    <span className="text-[8px] text-gray-300 font-bold uppercase tracking-[0.1em]">Matita Boutique</span>
                   </div>
-                  <span className="text-6xl md:text-7xl font-bold tracking-tighter text-[#f6a118] leading-none">${summary.finalTotal.toLocaleString()}</span>
+                  {/* PRECIO REDUCIDO EN PC: De 5xl a 3xl */}
+                  <span className="text-2xl md:text-3xl font-bold tracking-tighter text-[#f6a118] leading-none">${summary.finalTotal.toLocaleString()}</span>
                 </div>
 
                 <button 
                   onClick={handleCheckout} 
                   disabled={isProcessing}
-                  className={`w-full py-7 rounded-full font-bold uppercase tracking-[0.3em] text-2xl shadow-2xl transition-all border-4 border-white ${
-                    isProcessing ? 'bg-gray-100 text-gray-400' : 'matita-gradient-pink text-white hover:scale-[1.03] active:scale-95'
+                  className={`w-full py-4 rounded-full font-bold uppercase tracking-[0.15em] text-lg shadow-md transition-all border-2 border-white ${
+                    isProcessing ? 'bg-gray-100 text-gray-400' : 'matita-gradient-pink text-white hover:scale-[1.01] active:scale-95'
                   }`}
                 >
-                  {isProcessing ? "Sincronizando Stock..." : "Confirmar Reserva ✨"}
+                  {isProcessing ? "Sincronizando..." : "Confirmar Reserva ✨"}
                 </button>
               </div>
             )}
