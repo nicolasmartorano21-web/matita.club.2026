@@ -174,7 +174,7 @@ const Layout: React.FC = () => {
         )}
       </section>
 
-      {/* SECCIÓN 2: HEADER PEGAJOSO (Sigue aquí abajo...) */}
+      {/* SECCIÓN 2: HEADER PEGAJOSO */}
       <header 
         className={`sticky top-0 z-[100] transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/20 shadow-sm ${
           isScrolled ? 'py-3' : 'py-6'
@@ -243,9 +243,9 @@ const Layout: React.FC = () => {
         <Outlet />
       </main>
 
-      {/* SECCIÓN 4: ACCIONES FLOTANTES (Sticky) */}
-      <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[80] flex flex-col gap-4 items-center">
-         {/* Instagram con el link que me pasaste */}
+      {/* SECCIÓN 4: ACCIONES FLOTANTES (Sticky) - Z-INDEX CORREGIDO A 150 */}
+      <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[150] flex flex-col gap-4 items-center">
+         {/* Instagram */}
          <a 
            href="https://www.instagram.com/libreriamatita?igsh=OWhobXFzMHM1bnBj" 
            target="_blank" 
@@ -265,10 +265,11 @@ const Layout: React.FC = () => {
            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" className="w-8 h-8 brightness-0 invert group-hover:-rotate-12 transition-transform" alt="WA" />
          </a>
 
-         {/* Tu componente de carrito existente */}
+         {/* Componente de Carrito */}
          <Cart />
       </div>
-      {/* SECCIÓN 5: FOOTER DE DISEÑO PROPIO */}
+
+      {/* SECCIÓN 5: FOOTER */}
       <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-24 pb-0 relative overflow-hidden mt-20">
         <div className="absolute top-0 left-0 w-full h-2 bg-white/20 backdrop-blur-sm"></div>
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16 text-center md:text-left pb-12 relative z-10">
