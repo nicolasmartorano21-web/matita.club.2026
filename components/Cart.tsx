@@ -3,35 +3,42 @@ import { useApp } from '../App';
 import { CartItem, User, ColorStock } from '../types';
 
 /**
- * Utilidad para el formateo de imágenes mediante Cloudinary.
+ * getImgUrl: Utilidad para procesar imágenes a través de Cloudinary.
  */
-const getImgUrl = (id: string, w = 150) => {
-  if (!id) return "https://via.placeholder.com/150x150?text=Matita";
+const getImgUrl = (id: string | undefined, w = 250) => {
+  if (!id) return "https://via.placeholder.com/250x250?text=Matita";
   if (id.startsWith('data:') || id.startsWith('http')) return id;
   return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto:best,f_auto,w_${w}/${id}`;
 };
 
 /**
- * Métodos de pago ajustados. 
+ * CONFIGURACIÓN DE MÉTODOS DE PAGO CON "CARTELITOS"
+ * Aquí definimos los colores y mensajes de los avisos dinámicos.
  */
 const PAYMENT_METHODS = [
   { 
     id: 'efectivo', 
     label: 'Efectivo', 
     icon: '💵', 
-    detail: 'Abonás al retirar' 
+    detail: 'Abonás al retirar en el local',
+    alertBg: 'bg-green-100 border-green-300 text-green-800',
+    info: '¡Genial! Reservamos tus productos. Podés pagar en efectivo al retirar por Altos de la Calera. 🌸'
   },
   { 
     id: 'transferencia', 
     label: 'Transferencia', 
     icon: '🏦', 
-    detail: 'Alias: Matita.2020.mp o Matita.2023' 
+    detail: 'Alias: Matita.2020.mp / Matita.2023',
+    alertBg: 'bg-orange-100 border-orange-400 text-orange-900',
+    info: '¡AVISO IMPORTANTE! ⚠️ Para confirmar, envianos el comprobante por WhatsApp apenas termines el pedido. 🏦'
   },
   { 
     id: 'tarjeta', 
-    label: 'Tarjeta / Link', 
+    label: 'Tarjeta / Link de Pago', 
     icon: '💳', 
-    detail: 'Comisión extra según banco/tarjeta' 
+    detail: 'Crédito/Débito (Se abona en el local)',
+    alertBg: 'bg-pink-100 border-pink-400 text-pink-900',
+    info: 'AVISO: 💳 Los pagos con tarjeta son ÚNICAMENTE en la librería. Sujeto a recargos del banco.'
   }
 ];
 
@@ -46,15 +53,13 @@ const Cart: React.FC = () => {
 
   const GIFT_WRAP_PRICE = 2000;
   const POINTS_VALUATION = 0.5;
-  const MAX_POINTS_REDUCTION = 0.5;
+  const MAX_POINTS_REDUCTION_PCT = 0.5;
 
   const summary = useMemo(() => {
-    const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    
-    const pointsDiscount = (user && usePoints) 
-      ? Math.min(user.points * POINTS_VALUATION, subtotal * MAX_POINTS_REDUCTION) 
+    const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+    const pointsDiscount = (user && usePoints && user.isSocio) 
+      ? Math.min(user.points * POINTS_VALUATION, subtotal * MAX_POINTS_REDUCTION_PCT) 
       : 0;
-    
     const giftCost = isGift ? GIFT_WRAP_PRICE : 0;
     const finalTotal = Math.max(0, subtotal - pointsDiscount + giftCost);
 
@@ -69,58 +74,86 @@ const Cart: React.FC = () => {
 
   const updateQuantity = (index: number, delta: number) => {
     setCart(prev => {
-      const updatedCart = [...prev];
-      const targetItem = updatedCart[index];
-      const variantData = targetItem.product.colors.find(c => c.color === targetItem.selectedColor);
-      const stockAvailable = variantData ? variantData.stock : 999;
+      const updated = [...prev];
+      const item = { ...updated[index] };
+      const variant = item.product.colors.find(c => c.color === item.selectedColor);
+      const stock = variant ? variant.stock : 0;
+      const nextQty = item.quantity + delta;
 
-      const newQuantity = targetItem.quantity + delta;
-      if (newQuantity < 1) return prev;
-      if (newQuantity > stockAvailable) {
-        alert(`¡Ups! Solo quedan ${stockAvailable} unidades de este color. ✨`);
+      if (nextQty < 1) return prev;
+      if (nextQty > stock) {
+        alert(`¡Ups! Solo quedan ${stock} unidades. ✨`);
         return prev;
       }
-      updatedCart[index] = { ...targetItem, quantity: newQuantity };
-      return updatedCart;
+      item.quantity = nextQty;
+      updated[index] = item;
+      return updated;
     });
   };
 
+  /**
+   * handleCheckout: AQUÍ SE PROCESA EL DESCUENTO DE STOCK Y LA VENTA
+   */
   const handleCheckout = async () => {
+    if (cart.length === 0) return;
     setIsProcessing(true);
+
     try {
-      const selectedPayInfo = PAYMENT_METHODS.find(p => p.id === paymentMethod);
+      const selectedPay = PAYMENT_METHODS.find(p => p.id === paymentMethod);
       
-      if (user && usePoints && summary.pointsToDeduct > 0) {
-        const { error } = await supabase
-          .from('users')
-          .update({ points: Math.max(0, user.points - summary.pointsToDeduct) })
-          .eq('id', user.id);
-        
-        if (error) throw new Error("Error al procesar tus puntos del Club.");
+      // 1. DESCUENTO DE STOCK REAL EN BASE DE DATOS
+      for (const item of cart) {
+        const { data: currentProd } = await supabase
+          .from('products')
+          .select('colors')
+          .eq('id', item.product.id)
+          .single();
+
+        if (currentProd) {
+          const updatedColors = currentProd.colors.map((c: any) => {
+            if (c.color === item.selectedColor) {
+              return { ...c, stock: Math.max(0, c.stock - item.quantity) };
+            }
+            return c;
+          });
+
+          await supabase.from('products').update({ colors: updatedColors }).eq('id', item.product.id);
+        }
       }
 
-      const cartDetails = cart.map(item => 
-        `• *${item.product.name}* (${item.selectedColor}) x${item.quantity} -> $${(item.product.price * item.quantity).toLocaleString()}`
-      ).join('\n');
+      // 2. REGISTRO DE LA VENTA (PARA GRÁFICOS DEL ADMIN)
+      await supabase.from('sales').insert({
+        total: summary.finalTotal,
+        user_name: user?.name || 'Invitado',
+        category_summary: cart.map(i => i.product.category).join(', '),
+        created_at: new Date().toISOString()
+      });
 
-      const waMessage = 
-        `*✨ PEDIDO MATITA BOUTIQUE ✨*\n` +
+      // 3. DESCUENTO DE PUNTOS
+      if (user && usePoints && summary.pointsToDeduct > 0) {
+        await supabase.from('users').update({ points: Math.max(0, user.points - summary.pointsToDeduct) }).eq('id', user.id);
+      }
+
+      // 4. ENVÍO A WHATSAPP
+      const detail = cart.map(i => `• *${i.product.name}* (${i.selectedColor}) x${i.quantity}`).join('\n');
+      const waMsg = 
+        `*✨ NUEVA RESERVA - MATITA BOUTIQUE ✨*\n` +
         `👤 *Cliente:* ${user?.name || 'Invitado'}\n\n` +
-        `🛍️ *DETALLE:*\n${cartDetails}\n\n` +
+        `🛍️ *PEDIDO:*\n${detail}\n\n` +
         (summary.pointsDiscount > 0 ? `✨ *Club Matita:* -$${summary.pointsDiscount.toLocaleString()}\n` : '') +
-        (isGift ? `🎁 *Envoltorio Regalo:* Sí (+$${GIFT_WRAP_PRICE.toLocaleString()})\n` : '') +
-        `\n💰 *TOTAL BASE: $${summary.finalTotal.toLocaleString()}*\n` +
-        `💳 *MÉTODO PAGO:* ${selectedPayInfo?.label}\n` +
-        (paymentMethod === 'tarjeta' ? `⚠️ _Sujeto a comisión según banco (Se abona en librería)_\n` : '') +
-        (paymentMethod === 'transferencia' ? `🏦 *ALIAS:* Matita.2020.mp / Matita.2023\n` : '') +
-        `📍 *RETIRO:* Altos de la Calera, Córdoba.\n\n` +
-        `¿Tienen stock de todo? ¡Gracias! 🌸`;
+        (isGift ? `🎁 *Pack Regalo:* Sí\n` : '') +
+        `💰 *TOTAL: $${summary.finalTotal.toLocaleString()}*\n` +
+        `💳 *PAGO:* ${selectedPay?.label}\n\n` +
+        `¡Hola! Hice una reserva en la web. ¿Me confirman si está todo ok? 🌸`;
       
-      window.open(`https://wa.me/5493517587003?text=${encodeURIComponent(waMessage)}`, '_blank');
+      window.open(`https://wa.me/5493517587003?text=${encodeURIComponent(waMsg)}`, '_blank');
+      
       clearCart();
       setIsOpen(false);
+      alert("¡Reserva confirmada y stock descontado con éxito! ✨");
+
     } catch (err: any) {
-      alert(err.message);
+      alert("Error: " + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -128,10 +161,9 @@ const Cart: React.FC = () => {
 
   return (
     <>
-      {/* BOTÓN FLOTANTE */}
       <button 
         onClick={() => setIsOpen(true)}
-        className="w-16 h-16 md:w-20 md:h-20 bg-[#ea7e9c] text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white hover:scale-110 active:scale-95 transition-all relative group"
+        className="w-16 h-16 md:w-20 md:h-20 bg-[#ea7e9c] text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white hover:scale-110 active:scale-95 transition-all relative group z-[90]"
       >
         <svg className="w-8 h-8 md:w-10 md:h-10 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -143,106 +175,98 @@ const Cart: React.FC = () => {
         )}
       </button>
 
-      {/* DRAWER */}
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={() => setIsOpen(false)}></div>
-          
-          <div className="fixed right-0 top-0 h-full w-full sm:w-[35rem] bg-[#fdfaf6] shadow-2xl z-[200] flex flex-col border-l-[10px] border-[#fadb31] animate-slideUp overflow-hidden">
+          <div className="fixed right-0 top-0 h-full w-full sm:w-[38rem] bg-[#fdfaf6] shadow-2xl z-[200] flex flex-col border-l-[12px] border-[#fadb31] animate-slideUp overflow-hidden">
             
-            {/* Header */}
-            <div className="p-8 md:p-10 matita-gradient-orange text-white flex justify-between items-center shadow-lg shrink-0">
+            <div className="p-8 md:p-10 matita-gradient-orange text-white flex justify-between items-center shrink-0">
               <div className="flex flex-col">
-                <h3 className="text-4xl md:text-5xl font-logo leading-none">Tu Bolsa.</h3>
-                <p className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-80 mt-1">Sumergiéndote en el mundo matita</p>
+                <h3 className="text-4xl md:text-5xl font-logo uppercase tracking-tighter leading-none">Mi Bolsa.</h3>
+                <p className="text-[10px] uppercase font-bold tracking-[0.4em] opacity-80 mt-1">Librería & Club Matita</p>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-transform p-3 bg-white/20 rounded-full">
+              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-transform p-3 bg-white/20 rounded-full active:scale-90">
                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3}/></svg>
               </button>
             </div>
 
             <div className="flex-grow overflow-y-auto p-6 md:p-8 space-y-10 scrollbar-hide">
               {cart.length === 0 ? (
-                <div className="text-center py-40 flex flex-col items-center">
-                  <div className="text-9xl mb-6 opacity-20">🛒</div>
-                  <p className="text-2xl font-bold italic text-gray-400">La bolsa está vacía...</p>
+                <div className="text-center py-40 flex flex-col items-center opacity-40">
+                  <div className="text-[10rem] mb-6 animate-pulse">🛒</div>
+                  <p className="text-3xl font-bold italic text-gray-400 font-matita">Tu bolsa está vacía...</p>
                 </div>
               ) : (
                 <>
-                  {/* Items */}
                   <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest ml-4">Items Seleccionados</p>
+                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-4">Items en la bolsa:</p>
                     {cart.map((item, idx) => (
-                      <div key={`${item.product.id}-${idx}`} className="bg-white p-5 rounded-[2.5rem] shadow-sm border-2 border-white flex gap-5 items-center relative animate-fadeIn">
-                        <img src={getImgUrl(item.product.images[0], 150)} className="w-20 h-20 rounded-2xl object-cover" alt={item.product.name} />
+                      <div key={`${item.product.id}-${idx}`} className="bg-white p-5 rounded-[2.5rem] shadow-sm border-2 border-white flex gap-5 items-center relative animate-fadeIn group">
+                        <div className="w-20 h-20 bg-[#fef9eb] rounded-2xl overflow-hidden flex items-center justify-center border border-gray-50">
+                          <img src={getImgUrl(item.product.images[0], 150)} className="w-full h-full object-contain p-2" />
+                        </div>
                         <div className="flex-grow min-w-0">
-                          <h4 className="text-lg font-bold text-gray-800 leading-tight truncate">{item.product.name}</h4>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">{item.selectedColor}</p>
+                          <h4 className="text-lg font-bold text-gray-800 leading-tight truncate font-matita uppercase">{item.product.name}</h4>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Color: <span className="text-[#f6a118]">{item.selectedColor}</span></p>
                           <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-4 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
-                               <button onClick={() => updateQuantity(idx, -1)} className="text-2xl font-bold text-[#ea7e9c]">-</button>
-                               <span className="text-lg font-bold w-6 text-center text-gray-600">{item.quantity}</span>
-                               <button onClick={() => updateQuantity(idx, 1)} className="text-2xl font-bold text-[#f6a118]">+</button>
+                            <div className="flex items-center gap-4 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+                               <button onClick={() => updateQuantity(idx, -1)} className="text-2xl font-bold text-[#ea7e9c] hover:scale-125 transition-transform">-</button>
+                               <span className="text-xl font-bold w-6 text-center text-gray-600 font-matita">{item.quantity}</span>
+                               <button onClick={() => updateQuantity(idx, 1)} className="text-2xl font-bold text-[#f6a118] hover:scale-125 transition-transform">+</button>
                             </div>
-                            <span className="text-xl font-bold text-[#f6a118]">${(item.product.price * item.quantity).toLocaleString()}</span>
+                            <span className="text-2xl font-bold text-[#f6a118] tracking-tighter">${(item.product.price * item.quantity).toLocaleString()}</span>
                           </div>
                         </div>
-                        <button onClick={() => removeFromCart(idx)} className="absolute -top-2 -right-2 bg-white text-red-200 w-8 h-8 rounded-full shadow-md">×</button>
+                        <button onClick={() => removeFromCart(idx)} className="absolute -top-2 -right-2 bg-white text-red-200 w-10 h-10 rounded-full shadow-lg border border-gray-50 flex items-center justify-center text-2xl">×</button>
                       </div>
                     ))}
                   </div>
 
-                  {/* Club Matita */}
                   {user && user.isSocio && user.points > 0 && (
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                       <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest ml-4">Club Matita ✨</p>
-                       <div className={`p-5 rounded-[2.5rem] border-2 transition-all flex items-center justify-between ${usePoints ? 'bg-white border-[#fadb31]' : 'bg-transparent border-gray-200 opacity-60'}`}>
+                    <div className="space-y-4 pt-4 border-t-2 border-gray-50">
+                       <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-4">Club Matita ✨</p>
+                       <div className={`p-6 rounded-[2.5rem] border-2 transition-all flex items-center justify-between shadow-sm ${usePoints ? 'bg-white border-[#fadb31] ring-4 ring-[#fadb31]/5' : 'bg-transparent border-gray-200 opacity-60'}`}>
                          <div className="flex items-center gap-4">
-                            <span className="text-3xl">✨</span>
+                            <span className="text-4xl">✨</span>
                             <div className="text-left">
-                               <p className="text-sm font-bold text-gray-800">Canjear mis puntos ({user.points})</p>
-                               <p className="text-[10px] font-bold text-[#f6a118] uppercase">Descuento: ${summary.pointsDiscount.toLocaleString()}</p>
+                               <p className="text-lg font-bold text-gray-800">Canjear mis puntos ({user.points})</p>
+                               <p className="text-xs font-bold text-[#f6a118] uppercase tracking-tighter">Descuento: -${summary.pointsDiscount.toLocaleString()}</p>
                             </div>
                          </div>
-                         <button 
-                           onClick={() => setUsePoints(!usePoints)} 
-                           className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors ${usePoints ? 'bg-[#f6a118]' : 'bg-gray-300'}`}
-                         >
-                           <div className={`w-4 h-4 bg-white rounded-full transition-transform ${usePoints ? 'translate-x-6' : ''}`} />
+                         <button onClick={() => setUsePoints(!usePoints)} className={`w-14 h-7 rounded-full flex items-center px-1 transition-colors ${usePoints ? 'bg-[#f6a118]' : 'bg-gray-300'}`}>
+                           <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${usePoints ? 'translate-x-7' : ''}`} />
                          </button>
                        </div>
                     </div>
                   )}
 
-                  {/* Envoltorio */}
-                  <div className="space-y-6">
-                    <div className={`p-5 rounded-[2.5rem] border-2 transition-all flex items-center justify-between ${isGift ? 'bg-white border-[#ea7e9c]' : 'bg-transparent border-gray-200 opacity-60'}`}>
+                  <div className="space-y-4">
+                    <div className={`p-6 rounded-[2.5rem] border-2 transition-all flex items-center justify-between shadow-sm ${isGift ? 'bg-white border-[#ea7e9c] ring-4 ring-[#ea7e9c]/5' : 'bg-transparent border-gray-200 opacity-60'}`}>
                       <div className="flex items-center gap-4">
-                        <span className="text-3xl">🎁</span>
+                        <span className="text-4xl">🎁</span>
                         <div className="text-left">
-                          <p className="text-sm font-bold text-gray-800">¿Es un regalo? (+$2.000)</p>
-                          <p className="text-[10px] font-bold text-[#ea7e9c] uppercase">Incluye bolsa matita y moño</p>
+                          <p className="text-lg font-bold text-gray-800">¿Es para regalo? (+$2.000)</p>
+                          <p className="text-xs font-bold text-[#ea7e9c] uppercase tracking-tighter">Incluye bolsa matita y tarjetita</p>
                         </div>
                       </div>
-                      <button onClick={() => setIsGift(!isGift)} className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors ${isGift ? 'bg-[#ea7e9c]' : 'bg-gray-300'}`}>
-                        <div className={`w-4 h-4 bg-white rounded-full transition-transform ${isGift ? 'translate-x-6' : ''}`} />
+                      <button onClick={() => setIsGift(!isGift)} className={`w-14 h-7 rounded-full flex items-center px-1 transition-colors ${isGift ? 'bg-[#ea7e9c]' : 'bg-gray-300'}`}>
+                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${isGift ? 'translate-x-6' : ''}`} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Medios de Pago */}
-                  <div className="grid gap-3 pb-20">
-                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest ml-4">Medio de Pago</p>
+                  <div className="grid gap-3 pb-32">
+                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ml-4">Método de Pago:</p>
                     {PAYMENT_METHODS.map(p => (
                       <button 
                         key={p.id} 
                         onClick={() => setPaymentMethod(p.id)} 
-                        className={`w-full p-5 rounded-[2.5rem] border-2 transition-all flex items-center gap-4 ${paymentMethod === p.id ? 'bg-white border-[#fadb31] shadow-md' : 'bg-transparent border-white text-gray-400 opacity-60'}`}
+                        className={`w-full p-6 rounded-[2.5rem] border-2 transition-all flex items-center gap-5 shadow-sm ${paymentMethod === p.id ? 'bg-white border-[#fadb31] ring-4 ring-[#fadb31]/10' : 'bg-transparent border-white text-gray-400 opacity-60'}`}
                       >
-                        <span className="text-3xl">{p.icon}</span>
+                        <span className="text-4xl">{p.icon}</span>
                         <div className="text-left">
-                          <p className="text-lg font-bold text-gray-800 leading-none">{p.label}</p>
-                          <p className={`text-[10px] font-bold italic ${p.id === 'tarjeta' ? 'text-[#ea7e9c]' : 'opacity-60'}`}>{p.detail}</p>
+                          <p className="text-xl font-bold text-gray-800 leading-none mb-1">{p.label}</p>
+                          <p className="text-xs font-medium text-gray-400 italic">{p.detail}</p>
                         </div>
                       </button>
                     ))}
@@ -251,59 +275,38 @@ const Cart: React.FC = () => {
               )}
             </div>
 
-            {/* Footer */}
             {cart.length > 0 && (
-              <div className="p-8 md:p-10 bg-white border-t-2 border-gray-50 rounded-t-[4rem] shadow-xl space-y-4 shrink-0 z-10">
-                <div className="space-y-1 border-b border-gray-50 pb-4">
-                  <div className="flex justify-between text-gray-400 font-bold uppercase text-[10px]">
-                    <span>Subtotal</span>
-                    <span>${summary.subtotal.toLocaleString()}</span>
+              <div className="p-8 md:p-10 bg-white border-t-[8px] border-[#fef9eb] rounded-t-[4rem] shadow-xl space-y-6 shrink-0 z-10">
+                
+                {/* CARTELITO NOTORIO DINÁMICO */}
+                <div className={`p-6 rounded-[2.5rem] border-2 animate-fadeIn transition-all duration-500 shadow-inner ${
+                  PAYMENT_METHODS.find(p => p.id === paymentMethod)?.alertBg
+                }`}>
+                  <div className="flex items-center gap-4">
+                    <span className="text-4xl">📢</span>
+                    <p className="text-base font-bold italic leading-tight uppercase tracking-tight">
+                      {PAYMENT_METHODS.find(p => p.id === paymentMethod)?.info}
+                    </p>
                   </div>
-                  {summary.pointsDiscount > 0 && (
-                    <div className="flex justify-between text-[#ea7e9c] font-bold uppercase text-[10px]">
-                      <span>Canje Club</span>
-                      <span>-${summary.pointsDiscount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {isGift && (
-                    <div className="flex justify-between text-gray-400 font-bold uppercase text-[10px]">
-                      <span>Pack Regalo</span>
-                      <span>+${GIFT_WRAP_PRICE.toLocaleString()}</span>
-                    </div>
-                  )}
                 </div>
 
-                <div className="flex justify-between items-end">
+                <div className="flex justify-between items-center">
                   <div className="flex flex-col">
                     <span className="text-4xl md:text-5xl font-logo text-gray-800">Total</span>
-                    <span className="text-[10px] text-gray-400 italic font-bold uppercase tracking-widest mt-1">Sujeto a Stock</span>
+                    <span className="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Sujeto a Stock Real</span>
                   </div>
-                  <span className="text-6xl md:text-7xl font-bold tracking-tighter text-[#f6a118]">${summary.finalTotal.toLocaleString()}</span>
+                  <span className="text-6xl md:text-7xl font-bold tracking-tighter text-[#f6a118] leading-none">${summary.finalTotal.toLocaleString()}</span>
                 </div>
 
-                <div className="space-y-3">
-                  <button 
-                    onClick={handleCheckout} 
-                    disabled={isProcessing}
-                    className={`w-full py-7 rounded-full font-bold uppercase tracking-[0.3em] text-2xl shadow-xl transition-all ${isProcessing ? 'bg-gray-100 text-gray-400' : 'matita-gradient-pink text-white active:scale-95'}`}
-                  >
-                    {isProcessing ? "Procesando..." : "Confirmar Reserva ✨"}
-                  </button>
-
-                  {/* NOTAS DE PAGO DINÁMICAS */}
-                  <div className="flex items-center justify-center gap-2 px-4 animate-fadeIn">
-                    {paymentMethod === 'transferencia' && (
-                      <p className="text-[11px] text-gray-500 font-medium text-center leading-tight">
-                        <span className="text-[#f6a118] font-bold uppercase">¡Recordá!</span> Envianos el comprobante por WhatsApp para agilizar tu pedido. 🏦
-                      </p>
-                    )}
-                    {paymentMethod === 'tarjeta' && (
-                      <p className="text-[11px] text-gray-500 font-medium text-center leading-tight">
-                        <span className="text-[#ea7e9c] font-bold uppercase">Aviso:</span> El pago con tarjeta se realiza <span className="underline">únicamente en la librería</span>. 💳
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <button 
+                  onClick={handleCheckout} 
+                  disabled={isProcessing}
+                  className={`w-full py-7 rounded-full font-bold uppercase tracking-[0.3em] text-2xl shadow-2xl transition-all border-4 border-white ${
+                    isProcessing ? 'bg-gray-100 text-gray-400' : 'matita-gradient-pink text-white hover:scale-[1.03] active:scale-95'
+                  }`}
+                >
+                  {isProcessing ? "Sincronizando Stock..." : "Confirmar Reserva ✨"}
+                </button>
               </div>
             )}
           </div>
