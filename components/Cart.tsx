@@ -291,19 +291,7 @@ const Cart: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Cupón y Envoltorio */}
-                  <div className="space-y-6">
-                    <div className="flex gap-2">
-                       <input 
-                         type="text" 
-                         placeholder="CÓDIGO DE CUPÓN 🎟️" 
-                         className="flex-grow text-xs py-4 px-6 rounded-full border-2 border-white shadow-sm outline-none uppercase focus:border-[#fadb31]"
-                         value={couponCode}
-                         onChange={(e) => setCouponCode(e.target.value)}
-                       />
-                       <button onClick={handleApplyCoupon} className="bg-[#f6a118] text-white px-8 py-4 rounded-full font-bold text-xs uppercase shadow-md active:scale-95 transition-all">OK</button>
-                    </div>
-
+                 
                     <div className={`p-5 rounded-[2.5rem] border-2 transition-all flex items-center justify-between ${isGift ? 'bg-white border-[#ea7e9c] shadow-md' : 'bg-transparent border-gray-200 opacity-60'}`}>
                       <div className="flex items-center gap-4">
                         <span className="text-3xl">🎁</span>
