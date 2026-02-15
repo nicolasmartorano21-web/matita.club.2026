@@ -131,8 +131,8 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-matita bg-[#fef9eb]/30 transition-colors duration-500">
       
-      {/* SECCIÓN 1: CARRUSEL DE BANNERS DINÁMICOS */}
-      <section className="w-full relative overflow-hidden bg-white h-[45vh] md:h-[480px] shadow-sm">
+      {/* SECCIÓN 1: CARRUSEL RESPONSIVO - Limpio y sin duplicados */}
+      <section className="w-full relative overflow-hidden bg-white shadow-sm h-[60vh] sm:h-[500px] md:h-[600px] lg:h-[700px]">
         {loadingBanners ? (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
             <div className="w-12 h-12 border-4 border-[#fadb31] border-t-transparent rounded-full animate-spin"></div>
@@ -147,26 +147,26 @@ const Layout: React.FC = () => {
             >
               <img 
                 src={getFullUrl(url)} 
-                className={`w-full h-full object-cover transition-transform duration-[10000ms] ease-linear ${
+                className={`w-full h-full object-cover object-center transition-transform duration-[10000ms] ease-linear ${
                   idx === currentSlide ? 'scale-110' : 'scale-100'
                 }`} 
                 alt={`Matita Banner ${idx + 1}`} 
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/5"></div>
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/5"></div>
             </div>
           ))
         )}
 
-        {/* Indicadores de página del carrusel */}
+        {/* Indicadores de página - Posicionados correctamente al fondo del carrusel */}
         {!loadingBanners && banners.length > 1 && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-20">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-20">
             {banners.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
                 className={`h-2 rounded-full transition-all duration-700 ${
-                  idx === currentSlide ? 'w-12 bg-[#fadb31]' : 'w-2 bg-white/60 hover:bg-white'
-                } shadow-sm border border-black/5`}
+                  idx === currentSlide ? 'w-10 bg-[#fadb31]' : 'w-2 bg-white/60 hover:bg-white'
+                } shadow-md border border-black/5`}
                 aria-label={`Ver slide ${idx + 1}`}
               />
             ))}
@@ -174,7 +174,7 @@ const Layout: React.FC = () => {
         )}
       </section>
 
-      {/* SECCIÓN 2: HEADER PEGAJOSO (STICKY) */}
+      {/* SECCIÓN 2: HEADER PEGAJOSO (Sigue aquí abajo...) */}
       <header 
         className={`sticky top-0 z-[100] transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/20 shadow-sm ${
           isScrolled ? 'py-3' : 'py-6'
@@ -244,9 +244,10 @@ const Layout: React.FC = () => {
       </main>
 
       {/* SECCIÓN 4: ACCIONES FLOTANTES (Sticky) */}
-      <div className="fixed bottom-10 right-10 z-[80] flex flex-col gap-4 items-center">
+      <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[80] flex flex-col gap-4 items-center">
+         {/* Instagram con el link que me pasaste */}
          <a 
-           href="https://instagram.com/libreriamatita" 
+           href="https://www.instagram.com/libreriamatita?igsh=OWhobXFzMHM1bnBj" 
            target="_blank" 
            rel="noreferrer"
            className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white hover:scale-110 transition-transform group"
@@ -254,6 +255,7 @@ const Layout: React.FC = () => {
            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" className="w-8 h-8 group-hover:rotate-12 transition-transform" alt="IG" />
          </a>
 
+         {/* WhatsApp */}
          <a 
            href="https://wa.me/5493517587003" 
            target="_blank" 
@@ -263,9 +265,9 @@ const Layout: React.FC = () => {
            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" className="w-8 h-8 brightness-0 invert group-hover:-rotate-12 transition-transform" alt="WA" />
          </a>
 
+         {/* Tu componente de carrito existente */}
          <Cart />
       </div>
-
       {/* SECCIÓN 5: FOOTER DE DISEÑO PROPIO */}
       <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-24 pb-0 relative overflow-hidden mt-20">
         <div className="absolute top-0 left-0 w-full h-2 bg-white/20 backdrop-blur-sm"></div>
