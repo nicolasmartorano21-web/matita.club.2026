@@ -185,14 +185,14 @@ const Layout: React.FC = () => {
       {/* SECCIÓN 2: HEADER PEGAJOSO COMPACTO */}
       <header 
         className={`sticky top-0 z-[100] transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/10 shadow-sm ${
-          isScrolled ? 'py-1 md:py-1.5' : 'py-3 md:py-4'
+          isScrolled ? 'py-1.5 md:py-2' : 'py-3 md:py-4'
         }`}
       >
         <div className="container mx-auto px-4 md:px-6 flex items-center justify-between gap-4 max-w-7xl">
           
           <NavLink to="/" className="flex items-center gap-2 md:gap-3 shrink-0 group">
             <div className={`bg-[#fadb31] rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all duration-500 overflow-hidden ${
-              isScrolled ? 'w-8 h-8 md:w-10 md:h-10' : 'w-10 h-10 md:w-12 md:h-12'
+              isScrolled ? 'w-10 h-10 md:w-12 md:h-12' : 'w-12 h-12 md:w-14 md:h-14'
             }`}>
               <img 
                 src={getFullUrl(logoUrl)} 
@@ -202,24 +202,24 @@ const Layout: React.FC = () => {
             </div>
             <div className="flex flex-col">
               <h1 className={`font-matita text-gray-800 transition-all duration-500 uppercase leading-none tracking-tighter ${
-                isScrolled ? 'text-lg md:text-xl' : 'text-xl md:text-2xl lg:text-3xl'
+                isScrolled ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl lg:text-4xl'
               }`}>
                 MATITA
               </h1>
             </div>
           </NavLink>
 
-          {/* Navegación Desktop - Tamaños reducidos para Pro Look */}
-          <nav className="hidden lg:flex items-center justify-center gap-x-6 flex-grow">
+          {/* Navegación Desktop - Tamaños intermedios */}
+          <nav className="hidden lg:flex items-center justify-center gap-x-8 flex-grow">
             {navItems.map((item) => (
               <NavLink 
                 key={item.path} 
                 to={item.path} 
                 className={({ isActive }) =>
-                  `text-xs xl:text-sm font-bold tracking-tight transition-all border-b-2 pb-0.5 ${
+                  `text-sm xl:text-base font-bold tracking-tight transition-all border-b-2 pb-0.5 ${
                     isActive
                       ? 'text-[#f6a118] border-[#fadb31]'
-                      : 'text-gray-300 border-transparent hover:text-gray-500'
+                      : 'text-gray-400 border-transparent hover:text-gray-600'
                   }`
                 }
               >
@@ -232,7 +232,7 @@ const Layout: React.FC = () => {
           <div className="flex items-center gap-2 md:gap-4">
             <button 
               onClick={handleLogout} 
-              className="hidden md:flex bg-gray-50 text-gray-400 px-4 py-1.5 rounded-full text-[9px] font-bold hover:bg-red-50 hover:text-red-300 transition-all border border-transparent uppercase tracking-wider"
+              className="hidden md:flex bg-gray-50 text-gray-400 px-5 py-2 rounded-full text-[11px] font-bold hover:bg-red-50 hover:text-red-300 transition-all border border-transparent uppercase tracking-wider"
             >
                SALIR 🚪
             </button>
@@ -240,7 +240,7 @@ const Layout: React.FC = () => {
               onClick={() => setIsMenuOpen(true)} 
               className="lg:hidden p-2 text-[#f6a118] hover:scale-110 transition-transform"
             >
-               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" />
                </svg>
             </button>
@@ -249,64 +249,64 @@ const Layout: React.FC = () => {
       </header>
 
       {/* ÁREA DE CONTENIDO */}
-      <main className="container mx-auto flex-grow px-4 py-6 md:py-8 max-w-7xl animate-fadeIn">
+      <main className="container mx-auto flex-grow px-4 py-8 md:py-10 max-w-7xl animate-fadeIn">
         <Outlet />
       </main>
 
       {/* ACCIONES FLOTANTES */}
-      <div className="fixed bottom-6 right-6 z-[150] flex flex-col gap-3 items-center">
+      <div className="fixed bottom-6 right-6 z-[150] flex flex-col gap-4 items-center">
          <a 
            href="https://www.instagram.com/libreriamatita" 
            target="_blank" 
            rel="noreferrer"
-           className="w-10 h-10 md:w-11 md:h-11 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-100 hover:scale-110 transition-transform group"
+           className="w-11 h-11 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-100 hover:scale-110 transition-transform group"
          >
-           <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" className="w-5 h-5 group-hover:rotate-6 transition-transform" alt="IG" />
+           <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" className="w-6 h-6 group-hover:rotate-6 transition-transform" alt="IG" />
          </a>
          <a 
            href="https://wa.me/5493517587003" 
            target="_blank" 
            rel="noreferrer"
-           className="w-10 h-10 md:w-11 md:h-11 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform group"
+           className="w-11 h-11 md:w-12 md:h-12 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform group"
          >
-           <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" className="w-5 h-5 brightness-0 invert group-hover:-rotate-6 transition-transform" alt="WA" />
+           <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" className="w-6 h-6 brightness-0 invert group-hover:-rotate-6 transition-transform" alt="WA" />
          </a>
          <Cart />
       </div>
 
       {/* FOOTER REDUCIDO */}
-      <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-10 md:pt-12 pb-0 relative overflow-hidden mt-12">
-        <div className="absolute top-0 left-0 w-full h-1 bg-white/10 backdrop-blur-sm"></div>
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left pb-8 relative z-10">
-          <div className="space-y-3">
-            <h4 className="text-base md:text-lg font-bold uppercase tracking-tighter">Encontranos</h4>
-            <p className="text-xs md:text-sm italic leading-relaxed text-white/90">
+      <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-12 md:pt-16 pb-0 relative overflow-hidden mt-12">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-white/10 backdrop-blur-sm"></div>
+        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left pb-10 relative z-10">
+          <div className="space-y-4">
+            <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter">Encontranos</h4>
+            <p className="text-sm md:text-base italic leading-relaxed text-white/90">
               Altos de la Calera, Córdoba.<br/>
               Donde la papelería se vuelve mágica.
             </p>
           </div>
-          <div className="flex flex-col items-center justify-center space-y-2">
+          <div className="flex flex-col items-center justify-center space-y-3">
             <div 
               onClick={() => navigate('/admin')}
-              className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group"
+              className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group"
             >
-              <span className="text-2xl group-hover:rotate-12 transition-transform">✏️</span>
+              <span className="text-3xl md:text-4xl group-hover:rotate-12 transition-transform">✏️</span>
             </div>
-            <p className="font-logo text-3xl md:text-4xl mt-2 uppercase tracking-wider text-white">MATITA</p>
-            <p className="text-[9px] font-bold opacity-80 uppercase tracking-[0.3em] text-white">"UNA LIBRERÍA CON ALMA"</p>
+            <p className="font-logo text-4xl md:text-5xl mt-2 uppercase tracking-wider text-white">MATITA</p>
+            <p className="text-[11px] font-bold opacity-80 uppercase tracking-[0.3em] text-white">"UNA LIBRERÍA CON ALMA"</p>
           </div>
-          <div className="space-y-3">
-            <h4 className="text-base md:text-lg font-bold uppercase tracking-tighter">Seguinos</h4>
-            <div className="flex gap-4 justify-center md:justify-start">
-               <a href="https://instagram.com/libreriamatita" target="_blank" className="text-white hover:text-white/70 underline text-[10px] font-bold uppercase">INSTAGRAM</a>
+          <div className="space-y-4">
+            <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter">Seguinos</h4>
+            <div className="flex gap-5 justify-center md:justify-start">
+               <a href="https://instagram.com/libreriamatita" target="_blank" className="text-white hover:text-white/70 underline text-xs font-bold uppercase">INSTAGRAM</a>
                <span className="text-white/40">•</span>
-               <a href="https://wa.me/5493517587003" target="_blank" className="text-white hover:text-white/70 underline text-[10px] font-bold uppercase">WHATSAPP</a>
+               <a href="https://wa.me/5493517587003" target="_blank" className="text-white hover:text-white/70 underline text-xs font-bold uppercase">WHATSAPP</a>
             </div>
-            <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">HECHO CON AMOR EN CBA 🇦🇷</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">HECHO CON AMOR EN CBA 🇦🇷</p>
           </div>
         </div>
-        <div className="w-full h-8 bg-black/10 flex items-center justify-center">
-          <p className="text-white text-[8px] font-bold uppercase tracking-[0.4em] opacity-80">© 2026 MATITA • TODOS LOS DERECHOS RESERVADOS</p>
+        <div className="w-full h-10 bg-black/10 flex items-center justify-center">
+          <p className="text-white text-[10px] font-bold uppercase tracking-[0.4em] opacity-80">© 2026 MATITA • TODOS LOS DERECHOS RESERVADOS</p>
         </div>
       </footer>
 
@@ -314,21 +314,21 @@ const Layout: React.FC = () => {
       {isMenuOpen && (
         <div className="fixed inset-0 z-[200] flex animate-fadeIn">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setIsMenuOpen(false)}></div>
-          <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-2xl p-6 flex flex-col gap-6 border-l-8 border-[#fadb31] animate-slideUp">
-             <button onClick={() => setIsMenuOpen(false)} className="self-end text-3xl text-gray-200 leading-none">&times;</button>
-             <div className="flex flex-col gap-5">
+          <div className="absolute right-0 top-0 h-full w-72 bg-white shadow-2xl p-8 flex flex-col gap-8 border-l-8 border-[#fadb31] animate-slideUp">
+             <button onClick={() => setIsMenuOpen(false)} className="self-end text-4xl text-gray-200 leading-none">&times;</button>
+             <div className="flex flex-col gap-6">
                {navItems.map((item) => (
                  <NavLink 
                     key={item.path} 
                     to={item.path} 
                     onClick={() => setIsMenuOpen(false)} 
-                    className="text-lg font-bold text-gray-500 hover:text-[#f6a118] transition-colors uppercase tracking-tighter"
+                    className="text-xl font-bold text-gray-600 hover:text-[#f6a118] transition-colors uppercase tracking-tighter"
                  >
                    {item.label}
                  </NavLink>
                ))}
              </div>
-             <button onClick={handleLogout} className="mt-auto py-3 bg-gray-50 text-red-300 rounded-2xl font-bold text-sm border-2 border-transparent active:border-red-100 uppercase">Salir</button>
+             <button onClick={handleLogout} className="mt-auto py-4 bg-gray-50 text-red-300 rounded-2xl font-bold text-lg border-2 border-transparent active:border-red-100 uppercase">Salir</button>
           </div>
         </div>
       )}
