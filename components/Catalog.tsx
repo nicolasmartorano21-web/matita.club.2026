@@ -12,10 +12,12 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const { favorites, supabase } = useApp();
   const navigate = useNavigate();
   
-  // CARGA INTELIGENTE: Intentamos leer primero del caché local
+  // CARGA INTELIGENTE CON CACHÉ
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('matita_products_cache');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('matita_products_cache');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,23 +57,11 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
 
   useEffect(() => {
     fetchProducts();
-
-    // --- SINCRONIZACIÓN TOTAL (REALTIME) ---
     const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
-        (payload) => {
-          console.log('✨ MATITA REALTIME: Actualizando catálogo...', payload);
-          fetchProducts();
-        }
-      )
+      .channel('catalog_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchProducts())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [supabase]);
 
   const normalize = (s: string | null | undefined) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -79,15 +69,9 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
   const sortedAndFilteredProducts = useMemo(() => {
     let filtered = products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
       if (category === 'Favorites') return matchesSearch && favorites.includes(p.id);
       if (category === 'Catalog') return matchesSearch;
-      
-      if (category === 'Ofertas') {
-        const hasOfferPrice = p.oldPrice && p.oldPrice > 0;
-        return matchesSearch && (hasOfferPrice || p.category === 'Ofertas');
-      }
-      
+      if (category === 'Ofertas') return matchesSearch && ((p.oldPrice && p.oldPrice > 0) || p.category === 'Ofertas');
       return matchesSearch && normalize(p.category) === normalize(category);
     });
 
@@ -99,74 +83,71 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     });
   }, [category, searchTerm, favorites, products, sortBy]);
 
-  const categoryList: {label: string, cat: Category, icon: string, route: string}[] = [
+  const categoryList = [
     { label: 'ESCOLAR', cat: 'Escolar', icon: '✏️', route: '/escolar' },
     { label: 'OFICINA', cat: 'Oficina', icon: '💼', route: '/oficina' },
     { label: 'TECNOLOGIA', cat: 'Tecnología', icon: '🎧', route: '/tecnologia' },
     { label: 'NOVEDADES', cat: 'Novedades', icon: '✨', route: '/novedades' },
-    { label: 'OTROS ', cat: 'Otros', icon: '🎁', route: '/otros' },
+    { label: 'OTROS', cat: 'Otros', icon: '🎁', route: '/otros' },
     { label: 'OFERTAS', cat: 'Ofertas', icon: '🏷️', route: '/ofertas' }
   ];
 
   const getSectionTitle = () => {
-    if (category === 'Catalog') return 'EXPLORAR';
-    if (category === 'Favorites') return 'FAVORITOS';
-    if (normalize(category) === "otros") return 'OTROS';
+    if (category === 'Catalog') return 'Explorar';
+    if (category === 'Favorites') return 'Favoritos';
     return category.toUpperCase();
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <div className="w-10 h-10 border-4 border-gray-100 border-t-[#f6a118] rounded-full animate-spin"></div>
-        <p className="text-[#f6a118] font-bold text-xs uppercase tracking-widest animate-pulse">Abriendo el mundo matita...</p>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-24 gap-6">
+      <div className="w-12 h-12 border-4 border-gray-100 border-t-[#f6a118] rounded-full animate-spin"></div>
+      <p className="text-[#f6a118] font-bold text-sm uppercase tracking-widest animate-pulse">Abriendo el mundo matita...</p>
+    </div>
+  );
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12 max-w-7xl mx-auto">
-      {/* HEADER Y FILTROS - Fuentes Reducidas */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 className="text-3xl md:text-5xl font-matita font-bold text-[#f6a118] drop-shadow-sm uppercase tracking-tighter">
+    <div className="space-y-8 animate-fadeIn pb-16 max-w-7xl mx-auto px-1">
+      {/* HEADER INTERMEDIO */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <h2 className="text-4xl md:text-6xl font-matita font-bold text-[#f6a118] uppercase tracking-tighter">
           {getSectionTitle()}
         </h2>
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:max-w-xl">
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:max-w-2xl">
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="BUSCAR... 🔍"
+              placeholder="BUSCAR TESOROS... 🔍"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-5 py-2.5 rounded-full border-2 border-[#fadb31]/10 text-sm font-matita shadow-sm focus:border-[#fadb31] outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
+              className="w-full px-6 py-3.5 rounded-full border-2 border-[#fadb31]/20 text-base font-matita shadow-sm focus:border-[#fadb31] outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
             />
           </div>
           <div className="relative shrink-0">
              <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="appearance-none w-full px-6 py-2.5 pr-10 rounded-full border-2 border-[#fadb31]/10 text-xs font-bold text-gray-400 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-sm uppercase"
+              className="appearance-none w-full px-8 py-3.5 pr-12 rounded-full border-2 border-[#fadb31]/20 text-sm font-bold text-gray-500 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-sm uppercase"
             >
               <option value="recent">RECIENTES</option>
               <option value="priceLow">MENOR PRECIO</option>
               <option value="priceHigh">MAYOR PRECIO</option>
               <option value="name">NOMBRE A-Z</option>
             </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#f6a118] opacity-50">
-               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth={4}/></svg>
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-[#f6a118]">
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth={3}/></svg>
             </div>
           </div>
         </div>
       </div>
 
-      {/* CATEGORÍAS TIPO BURBUJA - Compactas */}
-      <div className="w-full relative py-1 border-y border-[#fadb31]/5 bg-white/30 backdrop-blur-sm">
-        <div className="flex overflow-x-auto gap-2 py-3 px-1 scrollbar-hide snap-x items-center whitespace-nowrap">
+      {/* CATEGORÍAS TIPO BURBUJA */}
+      <div className="w-full relative py-2 border-y border-[#fadb31]/10 bg-white/40">
+        <div className="flex overflow-x-auto gap-3 py-3 px-1 scrollbar-hide snap-x items-center whitespace-nowrap">
            <button 
              onClick={() => navigate('/catalog')}
-             className={`px-5 py-1.5 rounded-full text-[11px] font-bold transition-all border uppercase flex items-center gap-2 ${
+             className={`px-6 py-2 rounded-full text-xs font-bold transition-all border uppercase flex items-center gap-2 ${
                category === 'Catalog' 
-               ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-sm scale-105' 
+               ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-md scale-105' 
                : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
              }`}
            >
@@ -177,9 +158,9 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
              <button 
                key={item.cat}
                onClick={() => navigate(item.route)}
-               className={`px-5 py-1.5 rounded-full text-[11px] font-bold transition-all border uppercase flex items-center gap-2 ${
+               className={`px-6 py-2 rounded-full text-xs font-bold transition-all border uppercase flex items-center gap-2 ${
                  category === item.cat 
-                 ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-sm scale-105' 
+                 ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-md scale-105' 
                  : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
                }`}
              >
@@ -190,7 +171,7 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
       </div>
 
       {/* GRID DE PRODUCTOS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8">
         {sortedAndFilteredProducts.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
@@ -198,12 +179,12 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
 
       {/* NO RESULTS */}
       {sortedAndFilteredProducts.length === 0 && (
-        <div className="text-center py-20 flex flex-col items-center animate-fadeIn opacity-40">
-          <div className="text-4xl mb-4">🔎</div>
-          <p className="text-lg font-matita text-gray-300 italic px-6 uppercase tracking-tighter">Sin resultados para esta búsqueda</p>
+        <div className="text-center py-24 flex flex-col items-center animate-fadeIn opacity-50">
+          <div className="text-5xl mb-4">🔎</div>
+          <p className="text-xl font-matita text-gray-300 italic px-6 uppercase tracking-tighter">Sin tesoros para esta búsqueda</p>
           <button 
             onClick={() => {setSearchTerm(''); setSortBy('recent')}} 
-            className="mt-6 px-8 py-2.5 bg-[#fadb31] text-white rounded-full text-sm font-bold shadow-md hover:scale-105 active:scale-95 transition-all uppercase"
+            className="mt-8 px-10 py-3 bg-[#fadb31] text-white rounded-full text-sm font-bold shadow-md hover:scale-105 active:scale-95 transition-all uppercase"
           >
             Limpiar filtros ✨
           </button>
