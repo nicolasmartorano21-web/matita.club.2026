@@ -17,23 +17,27 @@ const Layout: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  // Imágenes de respaldo (Fallback) para carga instantánea
-  const defaultBanners = useMemo(() => [
-    "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=1600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?q=80&w=1600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1586075010633-2a420b91e1d7?q=80&w=1600&auto=format&fit=crop"
-  ], []);
-
-  const [banners, setBanners] = useState<string[]>(defaultBanners);
-  const [loadingBanners, setLoadingBanners] = useState(false);
+  // Estado inicial vacío para no mostrar imágenes viejas/predeterminadas
+  const [banners, setBanners] = useState<string[]>(() => {
+    try {
+      const cached = localStorage.getItem('matita_banners_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loadingBanners, setLoadingBanners] = useState(banners.length === 0);
 
   /**
    * getFullUrl: Genera la URL final optimizada.
+   * Optimización: En móviles (ancho < 768) pide 800px para carga instantánea. En PC 1920px.
    */
   const getFullUrl = (id: string) => {
     if (!id) return "";
     if (id.startsWith('http') || id.startsWith('data:')) return id;
-    return `https://res.cloudinary.com/dllm8ggob/image/upload/f_auto,q_auto,w_1920/${id}`;
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? 800 : 1920;
+    return `https://res.cloudinary.com/dllm8ggob/image/upload/f_auto,q_auto,w_${width}/${id}`;
   };
 
   /**
@@ -51,9 +55,10 @@ const Layout: React.FC = () => {
 
       if (data?.carousel_images && Array.isArray(data.carousel_images) && data.carousel_images.length > 0) {
         setBanners(data.carousel_images);
+        localStorage.setItem('matita_banners_cache', JSON.stringify(data.carousel_images));
       }
     } catch (err) {
-      console.warn("Layout: Usando banners predeterminados.");
+      console.warn("Layout: Error al obtener banners de la DB.");
     } finally {
       setLoadingBanners(false);
     }
@@ -70,18 +75,24 @@ const Layout: React.FC = () => {
 
     // Animación del carrusel mejorada: solo depende de la cantidad de banners
     const carouselTimer = setInterval(() => {
-      setCurrentSlide(prev => (banners.length > 0 ? (prev + 1) % banners.length : 0));
+      setBanners(prevBanners => {
+        if (prevBanners.length > 1) {
+          setCurrentSlide(prev => (prev + 1) % prevBanners.length);
+        }
+        return prevBanners;
+      });
     }, 6000);
 
-    // Suscripción Real-time
+    // Suscripción Real-time para cambios instantáneos desde el Admin
     const configSubscription = supabase
-      .channel('site_config_changes')
+      .channel('site_config_changes_layout')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'site_config', filter: 'id=eq.global' },
         (payload) => {
           if (payload.new && payload.new.carousel_images) {
             setBanners(payload.new.carousel_images);
+            localStorage.setItem('matita_banners_cache', JSON.stringify(payload.new.carousel_images));
           }
         }
       )
@@ -92,7 +103,7 @@ const Layout: React.FC = () => {
       clearInterval(carouselTimer);
       supabase.removeChannel(configSubscription);
     };
-  }, [supabase, fetchConfig, banners.length]);
+  }, [supabase, fetchConfig]);
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -121,36 +132,44 @@ const Layout: React.FC = () => {
     <div className="min-h-screen flex flex-col font-matita bg-[#fef9eb]/30 transition-colors duration-500 overflow-x-hidden">
       
       {/* SECCIÓN 1: CARRUSEL PERFECTO (Imagen completa + Fondo desenfocado) */}
-      <section className="w-full relative overflow-hidden bg-white shadow-sm h-[45vh] sm:h-[55vh] md:h-[600px] lg:h-[700px]">
-        {banners.map((url, idx) => (
-          <div 
-            key={`${url}-${idx}`} 
-            className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${
-              idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
-          >
-            {/* Capa 1: Fondo desenfocado para evitar espacios en blanco y dar look premium */}
-            <img 
-              src={getFullUrl(url)} 
-              className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20 scale-110" 
-              alt=""
-            />
-            
-            {/* Capa 2: Imagen principal que se ve COMPLETA (object-contain) */}
-            <img 
-              src={getFullUrl(url)} 
-              loading={idx === 0 ? "eager" : "lazy"}
-              className="relative w-full h-full object-contain drop-shadow-2xl" 
-              alt={`Matita Banner ${idx + 1}`} 
-            />
-            
-            {/* Overlay ultra suave para integrar con el diseño */}
-            <div className="absolute inset-0 bg-black/[0.02]"></div>
+      <section className="w-full relative overflow-hidden bg-white shadow-sm h-[50vh] sm:h-[60vh] md:h-[600px] lg:h-[750px]">
+        {loadingBanners && banners.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+             <div className="w-12 h-12 border-4 border-[#fadb31] border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ))}
+        ) : (
+          banners.map((url, idx) => (
+            <div 
+              key={`${url}-${idx}`} 
+              className={`absolute inset-0 transition-opacity duration-[1000ms] ease-in-out ${
+                idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              {/* Capa 1: Fondo desenfocado dinámico */}
+              <img 
+                src={getFullUrl(url)} 
+                className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-25 scale-110 pointer-events-none" 
+                alt=""
+              />
+              
+              {/* Capa 2: Imagen principal que se ve COMPLETA (object-contain) */}
+              <img 
+                src={getFullUrl(url)} 
+                loading={idx === 0 ? "eager" : "lazy"}
+                // @ts-ignore
+                fetchpriority={idx === 0 ? "high" : "low"}
+                className="relative w-full h-full object-contain drop-shadow-2xl" 
+                alt={`Matita Banner ${idx + 1}`} 
+              />
+              
+              {/* Overlay ultra suave para integrar con el diseño */}
+              <div className="absolute inset-0 bg-black/[0.01] pointer-events-none"></div>
+            </div>
+          ))
+        )}
 
         {/* Indicadores flotantes sobre el diseño */}
-        {banners.length > 1 && (
+        {!loadingBanners && banners.length > 1 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-40">
             {banners.map((_, idx) => (
               <button
@@ -159,6 +178,7 @@ const Layout: React.FC = () => {
                 className={`h-2.5 rounded-full transition-all duration-500 shadow-xl ${
                   idx === currentSlide ? 'w-12 bg-[#fadb31]' : 'w-2.5 bg-black/10 hover:bg-black/20'
                 } border border-white/50`}
+                aria-label={`Ir al banner ${idx + 1}`}
               />
             ))}
           </div>
