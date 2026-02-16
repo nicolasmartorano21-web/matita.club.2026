@@ -17,27 +17,31 @@ const Layout: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  // Imágenes de respaldo (Fallback) para carga instantánea
-  const defaultBanners = useMemo(() => [
-    "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=1600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?q=80&w=1600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1586075010633-2a420b91e1d7?q=80&w=1600&auto=format&fit=crop"
-  ], []);
-
-  const [banners, setBanners] = useState<string[]>(defaultBanners);
-  const [loadingBanners, setLoadingBanners] = useState(false);
+  // Estado inicial con caché para carga instantánea
+  const [banners, setBanners] = useState<string[]>(() => {
+    try {
+      const cached = localStorage.getItem('matita_banners_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loadingBanners, setLoadingBanners] = useState(banners.length === 0);
 
   /**
-   * getFullUrl: Genera la URL final optimizada.
+   * getFullUrl: Genera la URL optimizada.
+   * En móviles pide 800px para carga instantánea, en PC 1920px.
    */
   const getFullUrl = (id: string) => {
     if (!id) return "";
     if (id.startsWith('http') || id.startsWith('data:')) return id;
-    return `https://res.cloudinary.com/dllm8ggob/image/upload/f_auto,q_auto,w_1920/${id}`;
+    const isMobile = window.innerWidth < 768;
+    const width = isMobile ? 800 : 1920;
+    return `https://res.cloudinary.com/dllm8ggob/image/upload/f_auto,q_auto,w_${width}/${id}`;
   };
 
   /**
-   * fetchConfig: Obtiene la configuración de banners desde Supabase.
+   * fetchConfig: Sincroniza los banners con la base de datos (Admin).
    */
   const fetchConfig = useCallback(async () => {
     try {
@@ -51,9 +55,10 @@ const Layout: React.FC = () => {
 
       if (data?.carousel_images && Array.isArray(data.carousel_images) && data.carousel_images.length > 0) {
         setBanners(data.carousel_images);
+        localStorage.setItem('matita_banners_cache', JSON.stringify(data.carousel_images));
       }
     } catch (err) {
-      console.warn("Layout: Usando banners predeterminados.");
+      console.warn("Layout: Error sincronizando banners.");
     } finally {
       setLoadingBanners(false);
     }
@@ -63,30 +68,30 @@ const Layout: React.FC = () => {
     fetchConfig();
 
     const handleScroll = () => {
-      const scrolled = window.scrollY > 40;
-      setIsScrolled(scrolled);
+      setIsScrolled(window.scrollY > 40);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // Animación del carrusel mejorada: solo depende de la cantidad de banners
+    // Animación fluida del carrusel
     const carouselTimer = setInterval(() => {
-      setBanners(prevBanners => {
-        if (prevBanners.length > 0) {
-          setCurrentSlide(prev => (prev + 1) % prevBanners.length);
+      setBanners(prev => {
+        if (prev.length > 1) {
+          setCurrentSlide(c => (c + 1) % prev.length);
         }
-        return prevBanners;
+        return prev;
       });
     }, 6000);
 
-    // Suscripción Real-time
+    // Sincronización Real-time desde el Admin
     const configSubscription = supabase
-      .channel('site_config_changes')
+      .channel('layout_realtime')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'site_config', filter: 'id=eq.global' },
         (payload) => {
           if (payload.new && payload.new.carousel_images) {
             setBanners(payload.new.carousel_images);
+            localStorage.setItem('matita_banners_cache', JSON.stringify(payload.new.carousel_images));
           }
         }
       )
@@ -125,38 +130,44 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-matita bg-[#fef9eb]/30 transition-colors duration-500 overflow-x-hidden">
       
-      {/* SECCIÓN 1: CARRUSEL PROPORCIONAL - Altura optimizada */}
-      <section className="w-full relative overflow-hidden bg-white shadow-sm h-[35vh] md:h-[400px] lg:h-[480px]">
-        {banners.map((url, idx) => (
-          <div 
-            key={`${url}-${idx}`} 
-            className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${
-              idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
-          >
-            {/* Capa 1: Fondo desenfocado */}
-            <img 
-              src={getFullUrl(url)} 
-              className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20 scale-110" 
-              alt=""
-            />
-            
-            {/* Capa 2: Imagen principal */}
-            <img 
-              src={getFullUrl(url)} 
-              loading={idx === 0 ? "eager" : "lazy"}
-              className="relative w-full h-full object-contain drop-shadow-2xl" 
-              alt={`Matita Banner ${idx + 1}`} 
-            />
-            
-            {/* Overlay ultra suave */}
-            <div className="absolute inset-0 bg-black/[0.02]"></div>
+      {/* SECCIÓN 1: CARRUSEL PROPORCIONAL SIN ESPACIOS BLANCOS */}
+      <section className="w-full relative overflow-hidden bg-white shadow-sm h-[40vh] md:h-[450px] lg:h-[550px]">
+        {loadingBanners && banners.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
+             <div className="w-10 h-10 border-4 border-[#fadb31] border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ))}
+        ) : (
+          banners.map((url, idx) => (
+            <div 
+              key={`${url}-${idx}`} 
+              className={`absolute inset-0 transition-opacity duration-[1200ms] ease-in-out ${
+                idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              {/* Capa 1: Fondo desenfocado que rellena toda el área */}
+              <img 
+                src={getFullUrl(url)} 
+                className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20 scale-110 pointer-events-none" 
+                alt=""
+              />
+              
+              {/* Capa 2: Imagen principal contenida (SE VE COMPLETA SIEMPRE) */}
+              <img 
+                src={getFullUrl(url)} 
+                loading={idx === 0 ? "eager" : "lazy"}
+                className="relative w-full h-full object-contain drop-shadow-2xl pointer-events-none" 
+                alt={`Banner Matita ${idx + 1}`} 
+              />
+              
+              {/* Overlay sutil para elegancia */}
+              <div className="absolute inset-0 bg-black/[0.01] pointer-events-none"></div>
+            </div>
+          ))
+        )}
 
-        {/* Indicadores */}
+        {/* Indicadores Minimalistas */}
         {banners.length > 1 && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-40">
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2.5 z-40">
             {banners.map((_, idx) => (
               <button
                 key={idx}
@@ -164,48 +175,51 @@ const Layout: React.FC = () => {
                 className={`h-2 rounded-full transition-all duration-500 shadow-xl ${
                   idx === currentSlide ? 'w-10 bg-[#fadb31]' : 'w-2 bg-black/10 hover:bg-black/20'
                 } border border-white/50`}
+                aria-label={`Ir al slide ${idx + 1}`}
               />
             ))}
           </div>
         )}
       </section>
 
-      {/* SECCIÓN 2: HEADER PEGAJOSO - Letras más pequeñas */}
+      {/* SECCIÓN 2: HEADER PEGAJOSO COMPACTO */}
       <header 
-        className={`sticky top-0 z-[100] transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/20 shadow-sm ${
-          isScrolled ? 'py-1 md:py-2' : 'py-3 md:py-4'
+        className={`sticky top-0 z-[100] transition-all duration-500 bg-white/95 backdrop-blur-md border-b-2 border-[#fadb31]/10 shadow-sm ${
+          isScrolled ? 'py-1 md:py-1.5' : 'py-3 md:py-4'
         }`}
       >
-        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between gap-4 max-w-[1920px]">
+        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between gap-4 max-w-7xl">
           
           <NavLink to="/" className="flex items-center gap-2 md:gap-3 shrink-0 group">
             <div className={`bg-[#fadb31] rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all duration-500 overflow-hidden ${
-              isScrolled ? 'w-8 h-8 md:w-10 md:h-10' : 'w-10 h-10 md:w-14 md:h-14'
+              isScrolled ? 'w-8 h-8 md:w-10 md:h-10' : 'w-10 h-10 md:w-12 md:h-12'
             }`}>
               <img 
                 src={getFullUrl(logoUrl)} 
                 alt="Logo" 
-                className="w-full h-full object-contain p-1 group-hover:rotate-12 transition-transform duration-500" 
+                className="w-full h-full object-contain p-1 group-hover:rotate-6 transition-transform duration-500" 
               />
             </div>
             <div className="flex flex-col">
               <h1 className={`font-matita text-gray-800 transition-all duration-500 uppercase leading-none tracking-tighter ${
-                isScrolled ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl lg:text-4xl'
+                isScrolled ? 'text-lg md:text-xl' : 'text-xl md:text-2xl lg:text-3xl'
               }`}>
                 MATITA
               </h1>
             </div>
           </NavLink>
 
-          {/* Navegación Desktop - Tamaños reducidos para PC */}
-          <nav className="hidden lg:flex items-center justify-center gap-x-8 flex-grow">
+          {/* Navegación Desktop - Tamaños reducidos para Pro Look */}
+          <nav className="hidden lg:flex items-center justify-center gap-x-6 flex-grow">
             {navItems.map((item) => (
               <NavLink 
                 key={item.path} 
                 to={item.path} 
                 className={({ isActive }) =>
-                  `text-sm xl:text-base font-bold transition-all border-b-2 pb-0.5 hover:scale-105 active:scale-95 ${
-                    isActive ? 'text-[#f6a118] border-[#fadb31]' : 'text-gray-300 border-transparent hover:text-[#ea7e9c]'
+                  `text-xs xl:text-sm font-bold tracking-tight transition-all border-b-2 pb-0.5 ${
+                    isActive
+                      ? 'text-[#f6a118] border-[#fadb31]'
+                      : 'text-gray-300 border-transparent hover:text-gray-500'
                   }`
                 }
               >
@@ -218,7 +232,7 @@ const Layout: React.FC = () => {
           <div className="flex items-center gap-2 md:gap-4">
             <button 
               onClick={handleLogout} 
-              className="hidden md:flex bg-gray-50 text-gray-400 px-4 py-1.5 rounded-full text-[10px] font-bold hover:bg-red-50 hover:text-red-300 transition-all border border-transparent uppercase tracking-widest"
+              className="hidden md:flex bg-gray-50 text-gray-400 px-4 py-1.5 rounded-full text-[9px] font-bold hover:bg-red-50 hover:text-red-300 transition-all border border-transparent uppercase tracking-wider"
             >
                SALIR 🚪
             </button>
@@ -234,12 +248,12 @@ const Layout: React.FC = () => {
         </div>
       </header>
 
-      {/* SECCIÓN 3: ÁREA DE CONTENIDO */}
-      <main className="container mx-auto flex-grow px-4 py-8 max-w-[1600px] animate-fadeIn">
+      {/* ÁREA DE CONTENIDO */}
+      <main className="container mx-auto flex-grow px-4 py-6 md:py-8 max-w-7xl animate-fadeIn">
         <Outlet />
       </main>
 
-      {/* SECCIÓN 4: ACCIONES FLOTANTES */}
+      {/* ACCIONES FLOTANTES */}
       <div className="fixed bottom-6 right-6 z-[150] flex flex-col gap-3 items-center">
          <a 
            href="https://www.instagram.com/libreriamatita" 
@@ -247,88 +261,74 @@ const Layout: React.FC = () => {
            rel="noreferrer"
            className="w-10 h-10 md:w-11 md:h-11 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-100 hover:scale-110 transition-transform group"
          >
-           <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-12 transition-transform" alt="IG" />
+           <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" className="w-5 h-5 group-hover:rotate-6 transition-transform" alt="IG" />
          </a>
-
          <a 
            href="https://wa.me/5493517587003" 
            target="_blank" 
            rel="noreferrer"
            className="w-10 h-10 md:w-11 md:h-11 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform group"
          >
-           <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" className="w-5 h-5 md:w-6 md:h-6 brightness-0 invert group-hover:-rotate-12 transition-transform" alt="WA" />
+           <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" className="w-5 h-5 brightness-0 invert group-hover:-rotate-6 transition-transform" alt="WA" />
          </a>
-
          <Cart />
       </div>
 
-      {/* SECCIÓN 5: FOOTER - Letras proporcionadas */}
-      <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-12 pb-0 relative overflow-hidden mt-12">
+      {/* FOOTER REDUCIDO */}
+      <footer className="bg-gradient-to-br from-[#f6a118] to-[#ea7e9c] text-white pt-10 md:pt-12 pb-0 relative overflow-hidden mt-12">
         <div className="absolute top-0 left-0 w-full h-1 bg-white/10 backdrop-blur-sm"></div>
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left pb-10 relative z-10">
-          
+        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left pb-8 relative z-10">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 justify-center md:justify-start">
-               <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-lg shadow-sm">📍</div>
-               <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter">Encontranos</h4>
-            </div>
-            <p className="text-sm italic leading-relaxed text-white/90">
-              Te esperamos en **Altos de la Calera**, Córdoba.<br/>
+            <h4 className="text-base md:text-lg font-bold uppercase tracking-tighter">Encontranos</h4>
+            <p className="text-xs md:text-sm italic leading-relaxed text-white/90">
+              Altos de la Calera, Córdoba.<br/>
               Donde la papelería se vuelve mágica.
             </p>
           </div>
-
-          <div className="flex flex-col items-center justify-center space-y-3">
+          <div className="flex flex-col items-center justify-center space-y-2">
             <div 
               onClick={() => navigate('/admin')}
-              className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl border-2 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group"
+              className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 hover:border-white hover:scale-110 transition-all cursor-pointer group"
             >
-              <span className="text-3xl group-hover:rotate-12 transition-transform">✏️</span>
+              <span className="text-2xl group-hover:rotate-12 transition-transform">✏️</span>
             </div>
             <p className="font-logo text-3xl md:text-4xl mt-2 uppercase tracking-wider text-white">MATITA</p>
-            <p className="text-[10px] font-bold opacity-80 uppercase tracking-[0.3em] text-white">"UNA LIBRERÍA CON ALMA"</p>
+            <p className="text-[9px] font-bold opacity-80 uppercase tracking-[0.3em] text-white">"UNA LIBRERÍA CON ALMA"</p>
           </div>
-
           <div className="space-y-3">
-            <div className="flex items-center gap-2 justify-center md:justify-start">
-               <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-lg shadow-sm">✉️</div>
-               <h4 className="text-lg md:text-xl font-bold uppercase tracking-tighter">Seguinos</h4>
-            </div>
+            <h4 className="text-base md:text-lg font-bold uppercase tracking-tighter">Seguinos</h4>
             <div className="flex gap-4 justify-center md:justify-start">
-               <a href="https://instagram.com/libreriamatita" target="_blank" rel="noreferrer" className="text-white hover:text-white/70 underline transition-colors text-[11px] font-bold uppercase">INSTAGRAM</a>
+               <a href="https://instagram.com/libreriamatita" target="_blank" className="text-white hover:text-white/70 underline text-[10px] font-bold uppercase">INSTAGRAM</a>
                <span className="text-white/40">•</span>
-               <a href="https://wa.me/5493517587003" target="_blank" rel="noreferrer" className="text-white hover:text-white/70 underline transition-colors text-[11px] font-bold uppercase">WHATSAPP</a>
+               <a href="https://wa.me/5493517587003" target="_blank" className="text-white hover:text-white/70 underline text-[10px] font-bold uppercase">WHATSAPP</a>
             </div>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60">HECHO CON AMOR EN CBA 🇦🇷</p>
+            <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">HECHO CON AMOR EN CBA 🇦🇷</p>
           </div>
         </div>
-
         <div className="w-full h-8 bg-black/10 flex items-center justify-center">
-          <p className="text-white text-[8px] font-bold uppercase tracking-[0.4em] opacity-80">
-            © 2026 MATITA • TODOS LOS DERECHOS RESERVADOS
-          </p>
+          <p className="text-white text-[8px] font-bold uppercase tracking-[0.4em] opacity-80">© 2026 MATITA • TODOS LOS DERECHOS RESERVADOS</p>
         </div>
       </footer>
 
-      {/* SECCIÓN 6: MENÚ MÓVIL */}
+      {/* MENÚ MÓVIL */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[200] flex animate-fadeIn">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setIsMenuOpen(false)}></div>
           <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-2xl p-6 flex flex-col gap-6 border-l-8 border-[#fadb31] animate-slideUp">
-             <button onClick={() => setIsMenuOpen(false)} className="self-end text-3xl text-gray-200 hover:text-[#ea7e9c] leading-none transition-colors">&times;</button>
+             <button onClick={() => setIsMenuOpen(false)} className="self-end text-3xl text-gray-200 leading-none">&times;</button>
              <div className="flex flex-col gap-5">
                {navItems.map((item) => (
                  <NavLink 
                     key={item.path} 
                     to={item.path} 
                     onClick={() => setIsMenuOpen(false)} 
-                    className="text-lg font-bold text-gray-600 hover:text-[#f6a118] transition-colors uppercase tracking-tighter"
+                    className="text-lg font-bold text-gray-500 hover:text-[#f6a118] transition-colors uppercase tracking-tighter"
                  >
                    {item.label}
                  </NavLink>
                ))}
              </div>
-             <button onClick={handleLogout} className="mt-auto py-3 bg-gray-50 text-red-300 rounded-2xl font-bold text-sm border-2 border-transparent uppercase">Salir 🚪</button>
+             <button onClick={handleLogout} className="mt-auto py-3 bg-gray-50 text-red-300 rounded-2xl font-bold text-sm border-2 border-transparent active:border-red-100 uppercase">Salir</button>
           </div>
         </div>
       )}
