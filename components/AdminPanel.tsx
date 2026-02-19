@@ -1,19 +1,15 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Product, Category, User, Sale, ColorStock } from '../types';
+import { Product, User } from '../types';
 import { useApp } from '../App';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
-import { GoogleGenAI } from "@google/genai";
 
 /**
  * UTILERÍA DE IMÁGENES OPTIMIZADA
- * Usa Cloudinary para redimensionar y optimizar automáticamente.
- * Esto agiliza la carga al no descargar imágenes pesadas innecesariamente.
  */
 const getImgUrl = (id: string, w = 600) => {
   if (!id) return "https://via.placeholder.com/600x600?text=Matita";
   if (id.startsWith('data:') || id.startsWith('http')) return id;
-  // Optimizaciones de Cloudinary: q_auto (calidad), f_auto (formato), w_ (ancho)
   return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto,f_auto,w_${w}/${id}`;
 };
 
@@ -22,9 +18,8 @@ const AdminPanel: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<
-  'dashboard' | 'inventory' | 'sales' | 'socios' | 'ideas' | 'design' | 'carousel'
->('dashboard');
-
+    'dashboard' | 'inventory' | 'sales' | 'socios' | 'ideas' | 'design' | 'carousel'
+  >('dashboard');
 
   const handleAdminAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,19 +34,19 @@ const AdminPanel: React.FC = () => {
           <div className="text-9xl mb-4">👑</div>
           <h2 className="text-5xl font-bold text-gray-800 uppercase tracking-tighter">Panel Maestro</h2>
           <form onSubmit={handleAdminAuth} className="space-y-8">
-            <input 
-              type="password" 
-              placeholder="CLAVE MATITA" 
-              className="w-full text-3xl text-center shadow-inner py-5 bg-[#fef9eb] rounded-3xl outline-none uppercase" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
+            <input
+              type="password"
+              placeholder="CLAVE MATITA"
+              className="w-full text-3xl text-center shadow-inner py-5 bg-[#fef9eb] rounded-3xl outline-none uppercase"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
             <button className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-4xl font-bold shadow-lg hover:scale-105 transition-all uppercase">
               Entrar
             </button>
           </form>
-          <button 
-            onClick={() => navigate('/')} 
+          <button
+            onClick={() => navigate('/')}
             className="text-gray-400 font-bold uppercase underline text-sm mt-4"
           >
             Volver a la Tienda
@@ -60,7 +55,7 @@ const AdminPanel: React.FC = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="max-w-7xl mx-auto space-y-12 py-10 animate-fadeIn px-4">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b-4 border-[#fadb31]/20 pb-8">
@@ -80,18 +75,17 @@ const AdminPanel: React.FC = () => {
               { id: 'ideas', label: '💡 Ideas' },
               { id: 'design', label: '🎨 Marca' },
               { id: 'carousel', label: '🖼️ Carrusel' }
-
             ].map(tab => (
-              <button 
-                key={tab.id} 
-                onClick={() => setActiveTab(tab.id as any)} 
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
                 className={`px-5 py-2 md:px-8 md:py-3 rounded-[1.5rem] text-lg md:text-xl font-bold transition-all uppercase ${activeTab === tab.id ? 'matita-gradient-orange text-white shadow-lg scale-110' : 'bg-white text-gray-400 hover:text-[#f6a118]'}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          <button 
+          <button
             onClick={() => setIsAuthenticated(false)}
             className="px-8 py-3 bg-[#ea7e9c] text-white rounded-2xl font-bold text-lg shadow-xl hover:scale-110 transition-all uppercase flex items-center gap-2 border-4 border-white"
           >
@@ -115,11 +109,11 @@ const AdminPanel: React.FC = () => {
 
 const Dashboard: React.FC = () => {
   const { supabase } = useApp();
-  const [data, setData] = useState<any>({ 
-    salesHistory: [], 
-    categoryStats: [], 
+  const [data, setData] = useState<any>({
+    salesHistory: [],
+    categoryStats: [],
     lowStock: [],
-    totals: { sales: 0, users: 0, products: 0 } 
+    totals: { sales: 0, users: 0, products: 0 }
   });
 
   useEffect(() => {
@@ -129,20 +123,20 @@ const Dashboard: React.FC = () => {
       const { data: prods } = await supabase.from('products').select('*');
 
       if (sales && prods) {
-        const history = sales.map((s:any) => ({ 
+        const history = sales.map((s: any) => ({
           date: new Date(s.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-          amount: s.total 
+          amount: s.total
         }));
-        
+
         const catMap: any = {};
-        sales.forEach((s:any) => {
+        sales.forEach((s: any) => {
           const cat = s.category_summary || 'Varios';
           catMap[cat] = (catMap[cat] || 0) + s.total;
         });
         const categories = Object.keys(catMap).map(k => ({ name: k, total: catMap[k] }));
 
-        const lowStock = prods.filter((p:any) => {
-          const totalStock = p.colors?.reduce((acc:number, c:any) => acc + (Number(c.stock) || 0), 0) || 0;
+        const lowStock = prods.filter((p: any) => {
+          const totalStock = p.colors?.reduce((acc: number, c: any) => acc + (Number(c.stock) || 0), 0) || 0;
           return totalStock < 5;
         });
 
@@ -151,7 +145,7 @@ const Dashboard: React.FC = () => {
           categoryStats: categories,
           lowStock,
           totals: {
-            sales: sales.reduce((a:number, b:any) => a + b.total, 0),
+            sales: sales.reduce((a: number, b: any) => a + b.total, 0),
             users: usersCount || 0,
             products: prods.length || 0
           }
@@ -184,11 +178,11 @@ const Dashboard: React.FC = () => {
         <div className="bg-red-50 p-8 rounded-[2.5rem] border-4 border-white shadow-sm">
           <h4 className="text-2xl font-bold text-red-500 mb-4 flex items-center gap-2 uppercase tracking-tighter">⚠️ ALERTA DE REPOSICIÓN</h4>
           <div className="flex flex-wrap gap-4">
-             {data.lowStock.map((p:any) => (
-               <div key={p.id} className="bg-white px-4 py-2 rounded-xl text-sm font-bold text-gray-500 border border-red-100 uppercase">
-                 {p.name}
-               </div>
-             ))}
+            {data.lowStock.map((p: any) => (
+              <div key={p.id} className="bg-white px-4 py-2 rounded-xl text-sm font-bold text-gray-500 border border-red-100 uppercase">
+                {p.name}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -201,8 +195,8 @@ const Dashboard: React.FC = () => {
               <AreaChart data={data.salesHistory}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f6a118" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#f6a118" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f6a118" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#f6a118" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -225,7 +219,7 @@ const Dashboard: React.FC = () => {
                 <YAxis stroke="#999" fontSize={10} />
                 <Tooltip />
                 <Bar dataKey="total">
-                  {data.categoryStats.map((entry:any, index:number) => (
+                  {data.categoryStats.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>
@@ -238,10 +232,6 @@ const Dashboard: React.FC = () => {
   );
 };
 
-/**
- * INVENTORY MANAGER OPTIMIZADO
- * Implementa paginación y búsqueda en servidor para manejar miles de productos sin lentitud.
- */
 const InventoryManager: React.FC = () => {
   const { supabase } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
@@ -250,86 +240,23 @@ const InventoryManager: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scanInputRef = useRef<HTMLInputElement>(null);
 
-  // Función para escanear catálogo con Gemini
-  const handleMagicScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsScanning(true);
-    try {
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-
-      const base64Data = await base64Promise;
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          {
-            parts: [
-              { text: "Analiza esta imagen de un catálogo o lista de productos. Extrae los nombres de los productos y sus precios. Devuelve EXCLUSIVAMENTE un array JSON con objetos que tengan las propiedades 'name' (string) y 'price' (number). Si no hay precio claro, pon 0. Ejemplo: [{\"name\": \"Cuaderno\", \"price\": 1500}]" },
-              { inlineData: { mimeType: file.type, data: base64Data } }
-            ]
-          }
-        ]
-      });
-
-      const text = response.text || "";
-      const jsonMatch = text.match(/\[.*\]/s);
-      if (jsonMatch) {
-        const extractedProducts = JSON.parse(jsonMatch[0]);
-        if (extractedProducts.length > 0) {
-          // Tomamos el primero para editar o podríamos crear varios (por ahora uno para no complicar el flujo)
-          const first = extractedProducts[0];
-          setEditingProduct({
-            name: first.name,
-            price: first.price,
-            description: `Escaneado automáticamente: ${first.name}`,
-            oldPrice: 0,
-            points: Math.floor(first.price / 100), // Sugerencia de puntos
-            category: 'Escolar',
-            colors: [{ color: 'Único', stock: 10 }],
-            images: []
-          });
-          setFormMode('edit');
-          alert(`✨ ¡Escaneado con éxito! Se detectaron ${extractedProducts.length} productos. Cargando el primero: ${first.name}`);
-        }
-      } else {
-        alert("No pude entender la lista. Intenta con una foto más clara 📸");
-      }
-    } catch (error) {
-      console.error("Error en Magic Scan:", error);
-      alert("Hubo un problema al conectar con la IA de Matita.");
-    } finally {
-      setIsScanning(false);
-      if (scanInputRef.current) scanInputRef.current.value = "";
-    }
-  };
-
-  // Función de carga optimizada con paginación y búsqueda
   const fetchProducts = useCallback(async (isNewSearch = false) => {
     if (isLoading) return;
     setIsLoading(true);
-    
+
     try {
       const currentPage = isNewSearch ? 0 : page;
       const from = currentPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
       let query = supabase.from('products').select('*', { count: 'exact' });
-      
+
       if (searchTerm) {
         query = query.ilike('name', `%${searchTerm}%`);
       }
@@ -341,10 +268,10 @@ const InventoryManager: React.FC = () => {
       if (error) throw error;
 
       if (data) {
-        const mapped = data.map((p: any) => ({ 
-          ...p, 
-          oldPrice: p.old_price, 
-          images: p.images || [], 
+        const mapped = data.map((p: any) => ({
+          ...p,
+          oldPrice: p.old_price,
+          images: p.images || [],
           colors: p.colors || [],
           description: p.description || ""
         }));
@@ -368,7 +295,6 @@ const InventoryManager: React.FC = () => {
     }
   }, [supabase, page, searchTerm, isLoading]);
 
-  // Efecto para búsqueda con debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       if (formMode === 'list') fetchProducts(true);
@@ -387,7 +313,8 @@ const InventoryManager: React.FC = () => {
     a.click();
   };
 
-  const updateStock = (idx: number, change: number) => {
+  // Función para manejar el stock mediante botones
+  const updateStockByDelta = (idx: number, change: number) => {
     if (!editingProduct?.colors) return;
     const next = [...editingProduct.colors];
     const currentStock = Number(next[idx].stock) || 0;
@@ -395,12 +322,21 @@ const InventoryManager: React.FC = () => {
     setEditingProduct({ ...editingProduct, colors: next });
   };
 
+  // Función para manejar el stock mediante escritura directa
+  const handleStockChange = (idx: number, value: string) => {
+    if (!editingProduct?.colors) return;
+    const next = [...editingProduct.colors];
+    // Permitimos que el valor sea string vacío mientras el usuario borra
+    next[idx].stock = value === "" ? 0 : parseInt(value, 10);
+    setEditingProduct({ ...editingProduct, colors: next });
+  };
+
   const handleSave = async () => {
     if (!editingProduct?.name) return alert('¡Escribe el nombre del tesoro!');
-    
+
     setIsSaving(true);
     try {
-      const payload = { 
+      const payload = {
         name: editingProduct.name,
         description: editingProduct.description || "",
         price: Number(editingProduct.price) || 0,
@@ -408,17 +344,17 @@ const InventoryManager: React.FC = () => {
         points: Number(editingProduct.points) || 0,
         category: editingProduct.category || "Escolar",
         images: editingProduct.images || [],
-        colors: editingProduct.colors || [{color: 'Único', stock: 1}]
+        colors: editingProduct.colors || [{ color: 'Único', stock: 1 }]
       };
 
-      const { error } = editingProduct.id 
+      const { error } = editingProduct.id
         ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
         : await supabase.from('products').insert(payload);
-      
+
       if (error) throw error;
 
-      alert('✨ ¡Sincronizado con éxito! PC y Celular actualizados.');
-      setFormMode('list'); 
+      alert('✨ ¡Sincronizado con éxito!');
+      setFormMode('list');
       fetchProducts(true);
     } catch (err: any) {
       alert("Error al guardar: " + err.message);
@@ -430,7 +366,7 @@ const InventoryManager: React.FC = () => {
   const uploadImageToCloudinary = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "Matita_web"); 
+    formData.append("upload_preset", "Matita_web");
     formData.append("folder", "matita2026");
     try {
       const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", {
@@ -455,15 +391,15 @@ const InventoryManager: React.FC = () => {
       const publicId = await uploadImageToCloudinary(files[i]);
       if (publicId) uploadedIds.push(publicId);
     }
-    
+
     setEditingProduct(prev => {
       if (!prev) return null;
-      return { 
-        ...prev, 
-        images: [...(prev.images || []), ...uploadedIds] 
+      return {
+        ...prev,
+        images: [...(prev.images || []), ...uploadedIds]
       };
     });
-    
+
     setIsUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -473,43 +409,27 @@ const InventoryManager: React.FC = () => {
       <div className="space-y-10">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex flex-col gap-2 w-full md:w-auto">
-             <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">INVENTARIO 📦</h3>
-             <button onClick={exportInventory} className="text-[#f6a118] font-bold text-sm underline uppercase text-left">EXPORTAR CSV ⬇️</button>
+            <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">INVENTARIO 📦</h3>
+            <button onClick={exportInventory} className="text-[#f6a118] font-bold text-sm underline uppercase text-left">EXPORTAR CSV ⬇️</button>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 w-full md:max-w-xl">
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="BUSCAR PRODUCTO... 🔍"
               className="flex-grow px-6 py-3 rounded-2xl border-2 border-[#fadb31]/20 outline-none focus:border-[#fadb31] uppercase font-bold text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <div className="flex gap-2">
-              <input 
-                type="file" 
-                ref={scanInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleMagicScan} 
-              />
-              <button 
-                onClick={() => scanInputRef.current?.click()}
-                disabled={isScanning}
-                className="px-6 py-3 bg-[#fadb31] text-white rounded-2xl font-bold text-lg shadow-md hover:scale-105 transition-all uppercase whitespace-nowrap flex items-center gap-2"
-              >
-                {isScanning ? '⌛' : '📸 ESCÁNER'}
-              </button>
-              <button 
-                onClick={() => { 
-                  setEditingProduct({ name: '', description: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{color: 'Único', stock: 10}], images: [] }); 
-                  setFormMode('edit'); 
-                }} 
-                className="px-6 py-3 bg-[#f6a118] text-white rounded-2xl font-bold text-lg shadow-md hover:scale-105 transition-all uppercase whitespace-nowrap"
-              >
-                + NUEVO
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setEditingProduct({ name: '', description: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{ color: 'Único', stock: 10 }], images: [] });
+                setFormMode('edit');
+              }}
+              className="px-6 py-3 bg-[#f6a118] text-white rounded-2xl font-bold text-lg shadow-md hover:scale-105 transition-all uppercase whitespace-nowrap"
+            >
+              + NUEVO
+            </button>
           </div>
         </div>
 
@@ -517,14 +437,11 @@ const InventoryManager: React.FC = () => {
           {products.map(p => (
             <div key={p.id} className="bg-gray-50 p-4 rounded-[2rem] border-2 border-white shadow-sm hover:border-[#fadb31] transition-all flex flex-col h-full group">
               <div className="relative overflow-hidden rounded-2xl mb-3 aspect-square">
-                <img 
-                  src={getImgUrl(p.images[0], 200)} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                <img
+                  src={getImgUrl(p.images[0], 200)}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   loading="lazy"
                 />
-                {p.oldPrice && p.oldPrice > p.price && (
-                  <div className="absolute top-2 right-2 bg-[#ea7e9c] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Oferta</div>
-                )}
               </div>
               <h4 className="text-sm font-bold truncate text-gray-800 uppercase">{p.name}</h4>
               <div className="flex justify-between items-center mb-3">
@@ -533,7 +450,7 @@ const InventoryManager: React.FC = () => {
               </div>
               <div className="flex gap-2 mt-auto">
                 <button onClick={() => { setEditingProduct(p); setFormMode('edit'); }} className="flex-grow py-2 bg-white text-[#f6a118] rounded-xl font-bold border border-[#fadb31] text-xs uppercase hover:bg-[#fadb31] hover:text-white transition-colors">EDITAR</button>
-                <button onClick={async () => { if(confirm('¿BORRAR?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(true); } }} className="text-red-200 hover:text-red-500 transition-colors">🗑️</button>
+                <button onClick={async () => { if (confirm('¿BORRAR?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(true); } }} className="text-red-200 hover:text-red-500 transition-colors">🗑️</button>
               </div>
             </div>
           ))}
@@ -541,20 +458,13 @@ const InventoryManager: React.FC = () => {
 
         {hasMore && (
           <div className="flex justify-center pt-10">
-            <button 
+            <button
               onClick={() => fetchProducts(false)}
               disabled={isLoading}
               className="px-12 py-4 bg-white border-4 border-[#fadb31] text-[#f6a118] rounded-full font-bold hover:bg-[#fadb31] hover:text-white transition-all disabled:opacity-50 uppercase tracking-widest shadow-lg"
             >
               {isLoading ? 'CARGANDO...' : 'CARGAR MÁS PRODUCTOS 🔄'}
             </button>
-          </div>
-        )}
-
-        {products.length === 0 && !isLoading && (
-          <div className="text-center py-20 opacity-30">
-            <p className="text-4xl mb-4">📦</p>
-            <p className="text-xl font-bold uppercase">No se encontraron productos</p>
           </div>
         )}
       </div>
@@ -567,91 +477,95 @@ const InventoryManager: React.FC = () => {
         <button onClick={() => setFormMode('list')} className="text-4xl hover:scale-110 transition-all uppercase">🔙</button>
         <h3 className="text-3xl font-bold text-gray-800 uppercase tracking-tighter">EDITOR DE PRODUCTO</h3>
       </div>
-      
+
       <div className="bg-[#fef9eb] p-8 md:p-12 rounded-[3.5rem] border-4 border-white space-y-8 shadow-xl max-h-[85vh] overflow-y-auto scrollbar-hide">
         <div className="grid md:grid-cols-2 gap-6">
-           <div className="space-y-1">
-             <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Nombre del Tesoro</label>
-             <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.name || ''} onChange={e => setEditingProduct({...editingProduct!, name: e.target.value})} />
-           </div>
-           <div className="space-y-1">
-             <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Categoría</label>
-             <select className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.category} onChange={e => setEditingProduct({...editingProduct!, category: e.target.value as any})}>
-               {['Escolar', 'Otros', 'Oficina', 'Tecnología', 'Novedades', 'Ofertas'].map(c => <option key={c} value={c}>{c}</option>)}
-             </select>
-           </div>
+          <div className="space-y-1">
+            <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Nombre del Tesoro</label>
+            <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.name || ''} onChange={e => setEditingProduct({ ...editingProduct!, name: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Categoría</label>
+            <select className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.category} onChange={e => setEditingProduct({ ...editingProduct!, category: e.target.value as any })}>
+              {['Escolar', 'Otros', 'Oficina', 'Tecnología', 'Novedades', 'Ofertas'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="space-y-1">
-           <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Descripción del Producto 📖</label>
-           <textarea 
-             className="w-full text-xl p-6 rounded-[2rem] outline-none shadow-inner min-h-[150px] font-matita bg-white border-2 border-[#fadb31]/20" 
-             placeholder="Cuenta la historia de este producto..."
-             value={editingProduct?.description || ''} 
-             onChange={e => setEditingProduct({...editingProduct!, description: e.target.value})}
-           />
+          <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Descripción</label>
+          <textarea
+            className="w-full text-xl p-6 rounded-[2rem] outline-none shadow-inner min-h-[150px] font-matita bg-white border-2 border-[#fadb31]/20"
+            value={editingProduct?.description || ''}
+            onChange={e => setEditingProduct({ ...editingProduct!, description: e.target.value })}
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1">
-             <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Precio ($)</label>
-             <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.price || ''} onChange={e => setEditingProduct({...editingProduct!, price: Number(e.target.value)})} />
+            <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Precio ($)</label>
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner" value={editingProduct?.price || ''} onChange={e => setEditingProduct({ ...editingProduct!, price: Number(e.target.value) })} />
           </div>
           <div className="space-y-1">
-             <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Antes ($)</label>
-             <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.oldPrice || ''} onChange={e => setEditingProduct({...editingProduct!, oldPrice: Number(e.target.value)})} />
+            <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Antes ($)</label>
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner" value={editingProduct?.oldPrice || ''} onChange={e => setEditingProduct({ ...editingProduct!, oldPrice: Number(e.target.value) })} />
           </div>
           <div className="space-y-1">
-             <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Puntos ✨</label>
-             <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.points || ''} onChange={e => setEditingProduct({...editingProduct!, points: Number(e.target.value)})} />
+            <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Puntos ✨</label>
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner" value={editingProduct?.points || ''} onChange={e => setEditingProduct({ ...editingProduct!, points: Number(e.target.value) })} />
           </div>
         </div>
 
         <div className="space-y-4">
-           <div className="flex justify-between items-center px-4">
-             <h4 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Variantes y Stock</h4>
-             <button onClick={() => setEditingProduct({...editingProduct!, colors: [...(editingProduct?.colors || []), {color: 'Nuevo', stock: 1}]})} className="text-[#f6a118] font-bold uppercase tracking-widest">+ AÑADIR</button>
-           </div>
-           <div className="grid gap-3">
-             {editingProduct?.colors?.map((c, i) => (
-               <div key={i} className="flex items-center gap-4 bg-white p-4 rounded-2xl border-2 border-white shadow-sm">
-                  <input className="flex-grow border-none text-xl font-bold p-0 bg-transparent outline-none uppercase" value={c.color} onChange={e => {
-                    const n = [...editingProduct.colors!]; n[i].color = e.target.value; setEditingProduct({...editingProduct, colors: n});
-                  }} />
-                  <div className="flex items-center gap-6 bg-gray-50 px-6 py-2 rounded-full border-2 border-gray-100">
-                    <button onClick={() => updateStock(i, -1)} className="text-4xl text-[#ea7e9c] font-bold active:scale-125 transition-transform">-</button>
-                    <span className="text-2xl font-bold min-w-[2.5rem] text-center">{c.stock}</span>
-                    <button onClick={() => updateStock(i, 1)} className="text-4xl text-[#f6a118] font-bold active:scale-125 transition-transform">+</button>
-                  </div>
-                  <button onClick={() => setEditingProduct({...editingProduct, colors: editingProduct.colors?.filter((_, idx) => idx !== i)})} className="text-red-200 text-3xl">×</button>
-               </div>
-             ))}
-           </div>
-        </div>
-
-        <div className="space-y-4">
-           <div className="flex flex-wrap gap-4 mb-4">
-              {editingProduct?.images?.map((img, idx) => (
-                <div key={idx} className="relative w-24 h-24 group">
-                  <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl border-2 border-white shadow-sm" />
-                  <button onClick={() => setEditingProduct({...editingProduct!, images: editingProduct.images?.filter((_, i) => i !== idx)})} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+          <div className="flex justify-between items-center px-4">
+            <h4 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Variantes y Stock</h4>
+            <button onClick={() => setEditingProduct({ ...editingProduct!, colors: [...(editingProduct?.colors || []), { color: 'Nuevo', stock: 1 }] })} className="text-[#f6a118] font-bold uppercase tracking-widest">+ AÑADIR</button>
+          </div>
+          <div className="grid gap-3">
+            {editingProduct?.colors?.map((c, i) => (
+              <div key={i} className="flex items-center gap-4 bg-white p-4 rounded-2xl border-2 border-white shadow-sm">
+                <input className="flex-grow border-none text-xl font-bold p-0 bg-transparent outline-none uppercase" value={c.color} onChange={e => {
+                  const n = [...editingProduct.colors!]; n[i].color = e.target.value; setEditingProduct({ ...editingProduct, colors: n });
+                }} />
+                <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-full border-2 border-gray-100">
+                  <button onClick={() => updateStockByDelta(i, -1)} className="text-3xl text-[#ea7e9c] font-bold active:scale-125 transition-transform">-</button>
+                  <input
+                    type="number"
+                    className="w-16 bg-transparent text-center text-2xl font-bold outline-none border-b-2 border-[#fadb31]"
+                    value={c.stock}
+                    onChange={(e) => handleStockChange(i, e.target.value)}
+                  />
+                  <button onClick={() => updateStockByDelta(i, 1)} className="text-3xl text-[#f6a118] font-bold active:scale-125 transition-transform">+</button>
                 </div>
-              ))}
-           </div>
-           <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} multiple accept="image/*" />
-           <button 
-             onClick={() => fileInputRef.current?.click()} 
-             disabled={isUploading}
-             className="w-full py-8 bg-white border-4 border-dashed border-gray-200 text-gray-400 rounded-3xl text-xl font-bold hover:bg-gray-100 transition-all uppercase tracking-widest flex items-center justify-center gap-4"
-           >
-             {isUploading ? <><div className="w-6 h-6 border-4 border-[#f6a118] border-t-transparent rounded-full animate-spin"></div> SUBIENDO...</> : '📸 SUBIR FOTOS'}
-           </button>
+                <button onClick={() => setEditingProduct({ ...editingProduct, colors: editingProduct.colors?.filter((_, idx) => idx !== i) })} className="text-red-200 text-3xl">×</button>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <button 
-          onClick={handleSave} 
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-4 mb-4">
+            {editingProduct?.images?.map((img, idx) => (
+              <div key={idx} className="relative w-24 h-24 group">
+                <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl border-2 border-white shadow-sm" />
+                <button onClick={() => setEditingProduct({ ...editingProduct!, images: editingProduct.images?.filter((_, i) => i !== idx) })} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg">×</button>
+              </div>
+            ))}
+          </div>
+          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} multiple accept="image/*" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full py-8 bg-white border-4 border-dashed border-gray-200 text-gray-400 rounded-3xl text-xl font-bold hover:bg-gray-100 transition-all uppercase tracking-widest"
+          >
+            {isUploading ? "SUBIENDO..." : '📸 SUBIR FOTOS'}
+          </button>
+        </div>
+
+        <button
+          onClick={handleSave}
           disabled={isSaving}
-          className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-bold shadow-xl border-4 border-white hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-tighter disabled:opacity-50"
+          className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-bold shadow-xl border-4 border-white hover:scale-[1.02] active:scale-95 transition-all uppercase"
         >
           {isSaving ? "GUARDANDO..." : "¡GUARDAR PRODUCTO! ✨"}
         </button>
@@ -672,34 +586,17 @@ const SalesManager: React.FC = () => {
     fetchSales();
   }, [supabase]);
 
-  const exportSales = () => {
-    const headers = "Folio,Cliente,Fecha,Total,Categoría\n";
-    const csvContent = sales.map(s => `"${s.id.slice(0,8)}","${s.user_name || 'Invitado'}","${new Date(s.created_at).toLocaleString()}",${s.total},"${s.category_summary || 'Venta'}"`).join("\n");
-    const blob = new Blob([headers + csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Ventas_MATITA.csv';
-    a.click();
-  };
-
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="flex justify-between items-center px-4">
-        <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">HISTORIAL DE VENTAS 💸</h3>
-        <button onClick={exportSales} className="text-[#f6a118] font-bold text-sm underline uppercase">EXPORTAR CSV ⬇️</button>
-      </div>
+      <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter px-4">HISTORIAL DE VENTAS 💸</h3>
       <div className="grid gap-4">
         {sales.map(s => (
           <div key={s.id} className="bg-gray-50 p-6 rounded-[2rem] border-2 border-white shadow-sm flex justify-between items-center">
             <div>
-              <p className="text-xl font-bold text-gray-800 uppercase tracking-tighter">#{s.id.slice(0,8)} - {s.user_name || 'Invitado'}</p>
-              <p className="text-sm text-gray-400 uppercase tracking-widest">{new Date(s.created_at).toLocaleString()}</p>
+              <p className="text-xl font-bold text-gray-800 uppercase">#{s.id.slice(0, 8)} - {s.user_name || 'Invitado'}</p>
+              <p className="text-sm text-gray-400 uppercase">{new Date(s.created_at).toLocaleString()}</p>
             </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-[#f6a118]">${s.total}</p>
-              <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">{s.category_summary || 'Venta'}</p>
-            </div>
+            <p className="text-3xl font-bold text-[#f6a118]">${s.total}</p>
           </div>
         ))}
       </div>
@@ -715,21 +612,10 @@ const SociosManager: React.FC = () => {
 
   const fetchSocios = async () => {
     const { data } = await supabase.from('users').select('*').order('points', { ascending: false });
-    if (data) setSocios(data.map((u:any) => ({ ...u, isSocio: u.is_socio, isAdmin: u.is_admin })));
+    if (data) setSocios(data.map((u: any) => ({ ...u, isSocio: u.is_socio, isAdmin: u.is_admin })));
   };
 
   useEffect(() => { fetchSocios(); }, [supabase]);
-
-  const exportSocios = () => {
-    const headers = "Nombre,Email,Puntos,Socio\n";
-    const csvContent = socios.map(s => `"${s.name}","${s.email}",${s.points},${s.isSocio}`).join("\n");
-    const blob = new Blob([headers + csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Socios_MATITA.csv';
-    a.click();
-  };
 
   const handleUpdatePoints = async (id: string) => {
     const { error } = await supabase.from('users').update({ points: newPoints }).eq('id', id);
@@ -742,40 +628,33 @@ const SociosManager: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="flex justify-between items-center px-4">
-        <div className="flex items-center gap-4">
-          <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">SOCIOS DEL CLUB 👑</h3>
-          <button onClick={exportSocios} className="text-[#f6a118] font-bold text-sm underline uppercase">EXPORTAR CSV ⬇️</button>
-        </div>
-        <span className="bg-[#fef9eb] text-[#f6a118] px-4 py-2 rounded-full font-bold uppercase tracking-widest">{socios.length} MIEMBROS</span>
-      </div>
-      
+      <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter px-4">SOCIOS DEL CLUB 👑</h3>
       <div className="grid gap-4">
         {socios.map(s => (
           <div key={s.id} className="bg-white p-6 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#fef9eb] rounded-full flex items-center justify-center text-2xl">
-                  {s.isSocio ? '👑' : '👤'}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-[#fef9eb] rounded-full flex items-center justify-center text-2xl">
+                {s.isSocio ? '👑' : '👤'}
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-gray-800 uppercase">{s.name}</h4>
+                <p className="text-sm text-gray-400 uppercase">{s.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              {editingPointsId === s.id ? (
+                <div className="flex items-center gap-2">
+                  <input type="number" className="w-20 p-2 text-center border-2 rounded-xl" value={newPoints} onChange={e => setNewPoints(Number(e.target.value))} />
+                  <button onClick={() => handleUpdatePoints(s.id)} className="bg-green-500 text-white p-2 rounded-xl">✓</button>
+                  <button onClick={() => setEditingPointsId(null)} className="bg-gray-100 text-gray-400 p-2 rounded-xl">×</button>
                 </div>
-                <div>
-                   <h4 className="text-xl font-bold text-gray-800 uppercase tracking-tighter">{s.name}</h4>
-                   <p className="text-sm text-gray-400 uppercase tracking-widest">{s.email}</p>
+              ) : (
+                <div className="cursor-pointer text-right" onClick={() => { setEditingPointsId(s.id); setNewPoints(s.points); }}>
+                  <p className="text-2xl font-bold text-[#f6a118]">{s.points}</p>
+                  <p className="text-[10px] font-bold text-gray-300 uppercase">PUNTOS ✨</p>
                 </div>
-             </div>
-             <div className="flex items-center gap-6">
-                {editingPointsId === s.id ? (
-                  <div className="flex items-center gap-2">
-                    <input type="number" className="w-20 p-2 text-center border-2 rounded-xl uppercase shadow-inner" value={newPoints} onChange={e => setNewPoints(Number(e.target.value))} />
-                    <button onClick={() => handleUpdatePoints(s.id)} className="bg-green-500 text-white p-2 rounded-xl uppercase font-bold shadow-md">✓</button>
-                    <button onClick={() => setEditingPointsId(null)} className="bg-gray-100 text-gray-400 p-2 rounded-xl uppercase font-bold">×</button>
-                  </div>
-                ) : (
-                  <div className="cursor-pointer text-right" onClick={() => { setEditingPointsId(s.id); setNewPoints(s.points); }}>
-                    <p className="text-2xl font-bold text-[#f6a118] leading-none tracking-tighter">{s.points}</p>
-                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">PUNTOS ✨</p>
-                  </div>
-                )}
-             </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -800,9 +679,9 @@ const IdeasManager: React.FC = () => {
       <div className="grid gap-6">
         {ideas.map(i => (
           <div key={i.id} className="bg-[#fef9eb] p-8 rounded-[3rem] border-4 border-white shadow-md">
-             <p className="text-2xl font-bold text-gray-800 mb-2 italic uppercase tracking-tighter">"{i.title}"</p>
-             <p className="text-lg text-gray-500 uppercase tracking-tight">{i.content}</p>
-             <p className="mt-4 text-sm text-[#f6a118] font-bold uppercase tracking-widest">- {i.user_name}</p>
+            <p className="text-2xl font-bold text-gray-800 mb-2 italic uppercase">"{i.title}"</p>
+            <p className="text-lg text-gray-500">{i.content}</p>
+            <p className="mt-4 text-sm text-[#f6a118] font-bold uppercase">- {i.user_name}</p>
           </div>
         ))}
       </div>
@@ -815,11 +694,11 @@ const DesignManager: React.FC = () => {
   const fRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
-  
+
   const uploadLogoToCloudinary = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "Matita_web"); 
+    formData.append("upload_preset", "Matita_web");
     try {
       const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", {
         method: "POST",
@@ -851,11 +730,10 @@ const DesignManager: React.FC = () => {
       <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter">IDENTIDAD DE MARCA 🎨</h3>
       <div className="bg-[#fef9eb] p-12 rounded-[4rem] shadow-xl border-4 border-white">
         <div className="w-48 h-48 bg-white rounded-full mx-auto shadow-inner flex items-center justify-center p-6 border-4 border-[#fadb31] cursor-pointer" onClick={() => fRef.current?.click()}>
-           <img src={previewFile ? URL.createObjectURL(previewFile) : getImgUrl(logoUrl, 300)} className="w-full h-full object-contain" alt="Logo" />
+          <img src={previewFile ? URL.createObjectURL(previewFile) : getImgUrl(logoUrl, 300)} className="w-full h-full object-contain" alt="Logo" />
         </div>
         <input type="file" ref={fRef} className="hidden" onChange={e => setPreviewFile(e.target.files?.[0] || null)} accept="image/*" />
-        <p className="mt-4 text-gray-400 font-bold uppercase tracking-widest text-xs">Toca el logo para cambiarlo</p>
-        <button onClick={saveDesign} disabled={isSaving} className="w-full mt-10 py-5 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-lg uppercase tracking-widest">
+        <button onClick={saveDesign} disabled={isSaving} className="w-full mt-10 py-5 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-lg uppercase">
           {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
         </button>
       </div>
@@ -871,17 +749,9 @@ const CarouselManager: React.FC = () => {
 
   useEffect(() => {
     const fetchCarousel = async () => {
-      const { data } = await supabase
-        .from('site_config')
-        .select('carousel_images')
-        .eq('id', 'global')
-        .maybeSingle();
-
-      if (data?.carousel_images) {
-        setImages(data.carousel_images);
-      }
+      const { data } = await supabase.from('site_config').select('carousel_images').eq('id', 'global').maybeSingle();
+      if (data?.carousel_images) setImages(data.carousel_images);
     };
-
     fetchCarousel();
   }, [supabase]);
 
@@ -890,112 +760,44 @@ const CarouselManager: React.FC = () => {
     formData.append("file", file);
     formData.append("upload_preset", "Matita_web");
     formData.append("folder", "matita2026/carousel");
-
-    const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", {
-      method: "POST",
-      body: formData
-    });
-
+    const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", { method: "POST", body: formData });
     const data = await res.json();
     return data.public_id;
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-
     const newImages: string[] = [];
     for (let i = 0; i < e.target.files.length; i++) {
       const id = await uploadToCloudinary(e.target.files[i]);
       if (id) newImages.push(id);
     }
-
     setImages(prev => [...prev, ...newImages]);
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const moveImage = (index: number, direction: number) => {
-    const newArr = [...images];
-    const target = index + direction;
-    if (target < 0 || target >= images.length) return;
-
-    [newArr[index], newArr[target]] = [newArr[target], newArr[index]];
-    setImages(newArr);
-  };
+  const removeImage = (index: number) => setImages(prev => prev.filter((_, i) => i !== index));
 
   const saveCarousel = async () => {
     setIsSaving(true);
-
-    await supabase.from('site_config').upsert({
-      id: 'global',
-      carousel_images: images
-    });
-
+    await supabase.from('site_config').upsert({ id: 'global', carousel_images: images });
     setIsSaving(false);
-    alert("✨ Carrusel actualizado correctamente");
+    alert("✨ Carrusel actualizado");
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-10">
-      <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter text-center">
-        ADMINISTRAR CARRUSEL 🖼️
-      </h3>
-
+      <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter text-center">ADMINISTRAR CARRUSEL 🖼️</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {images.map((img, i) => (
           <div key={i} className="relative group">
-            <img
-              src={`https://res.cloudinary.com/dllm8ggob/image/upload/w_600/${img}`}
-              className="rounded-2xl object-cover aspect-square border-4 border-white shadow-md"
-            />
-
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2 rounded-2xl">
-              <button
-                onClick={() => moveImage(i, -1)}
-                className="bg-white px-3 py-1 rounded-full text-xs font-bold"
-              >
-                ⬆️
-              </button>
-              <button
-                onClick={() => moveImage(i, 1)}
-                className="bg-white px-3 py-1 rounded-full text-xs font-bold"
-              >
-                ⬇️
-              </button>
-              <button
-                onClick={() => removeImage(i)}
-                className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold"
-              >
-                ✕
-              </button>
-            </div>
+            <img src={`https://res.cloudinary.com/dllm8ggob/image/upload/w_600/${img}`} className="rounded-2xl object-cover aspect-square border-4 border-white shadow-md" />
+            <button onClick={() => removeImage(i)} className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full">✕</button>
           </div>
         ))}
       </div>
-
-      <input
-        type="file"
-        ref={fileRef}
-        className="hidden"
-        multiple
-        accept="image/*"
-        onChange={handleUpload}
-      />
-
-      <button
-        onClick={() => fileRef.current?.click()}
-        className="w-full py-6 border-4 border-dashed border-gray-300 rounded-3xl font-bold uppercase text-gray-400 hover:bg-gray-100"
-      >
-        📸 ABRIR GALERÍA Y AGREGAR IMÁGENES
-      </button>
-
-      <button
-        onClick={saveCarousel}
-        disabled={isSaving}
-        className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-xl uppercase"
-      >
+      <input type="file" ref={fileRef} className="hidden" multiple accept="image/*" onChange={handleUpload} />
+      <button onClick={() => fileRef.current?.click()} className="w-full py-6 border-4 border-dashed border-gray-300 rounded-3xl font-bold uppercase text-gray-400">📸 AGREGAR IMÁGENES</button>
+      <button onClick={saveCarousel} disabled={isSaving} className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-xl uppercase">
         {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
       </button>
     </div>
