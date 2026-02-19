@@ -1,12 +1,19 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product, Category, User, Sale, ColorStock } from '../types';
 import { useApp } from '../App';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
+import { GoogleGenAI } from "@google/genai";
 
+/**
+ * UTILERÍA DE IMÁGENES OPTIMIZADA
+ * Usa Cloudinary para redimensionar y optimizar automáticamente.
+ * Esto agiliza la carga al no descargar imágenes pesadas innecesariamente.
+ */
 const getImgUrl = (id: string, w = 600) => {
   if (!id) return "https://via.placeholder.com/600x600?text=Matita";
   if (id.startsWith('data:') || id.startsWith('http')) return id;
+  // Optimizaciones de Cloudinary: q_auto (calidad), f_auto (formato), w_ (ancho)
   return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto,f_auto,w_${w}/${id}`;
 };
 
@@ -191,13 +198,19 @@ const Dashboard: React.FC = () => {
           <h4 className="text-3xl font-bold text-gray-700 ml-4 uppercase tracking-tighter">TENDENCIA DE VENTAS 💸</h4>
           <div className="h-[350px] w-full bg-[#fdfaf6] p-4 rounded-[2.5rem] border-2 border-white shadow-inner">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.salesHistory}>
+              <AreaChart data={data.salesHistory}>
+                <defs>
+                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f6a118" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f6a118" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="date" stroke="#999" fontSize={10} />
                 <YAxis stroke="#999" fontSize={10} />
                 <Tooltip />
-                <Line type="monotone" dataKey="amount" stroke="#f6a118" strokeWidth={4} dot={{ r: 5 }} />
-              </LineChart>
+                <Area type="monotone" dataKey="amount" stroke="#f6a118" fillOpacity={1} fill="url(#colorSales)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -225,6 +238,10 @@ const Dashboard: React.FC = () => {
   );
 };
 
+/**
+ * INVENTORY MANAGER OPTIMIZADO
+ * Implementa paginación y búsqueda en servidor para manejar miles de productos sin lentitud.
+ */
 const InventoryManager: React.FC = () => {
   const { supabase } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
@@ -232,20 +249,132 @@ const InventoryManager: React.FC = () => {
   const [formMode, setFormMode] = useState<'list' | 'edit'>('list');
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scanInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchProducts = async () => {
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (data) setProducts(data.map((p: any) => ({ 
-      ...p, 
-      oldPrice: p.old_price, 
-      images: p.images || [], 
-      colors: p.colors || [],
-      description: p.description || ""
-    })));
+  // Función para escanear catálogo con Gemini
+  const handleMagicScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+
+      const base64Data = await base64Promise;
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [
+          {
+            parts: [
+              { text: "Analiza esta imagen de un catálogo o lista de productos. Extrae los nombres de los productos y sus precios. Devuelve EXCLUSIVAMENTE un array JSON con objetos que tengan las propiedades 'name' (string) y 'price' (number). Si no hay precio claro, pon 0. Ejemplo: [{\"name\": \"Cuaderno\", \"price\": 1500}]" },
+              { inlineData: { mimeType: file.type, data: base64Data } }
+            ]
+          }
+        ]
+      });
+
+      const text = response.text || "";
+      const jsonMatch = text.match(/\[.*\]/s);
+      if (jsonMatch) {
+        const extractedProducts = JSON.parse(jsonMatch[0]);
+        if (extractedProducts.length > 0) {
+          // Tomamos el primero para editar o podríamos crear varios (por ahora uno para no complicar el flujo)
+          const first = extractedProducts[0];
+          setEditingProduct({
+            name: first.name,
+            price: first.price,
+            description: `Escaneado automáticamente: ${first.name}`,
+            oldPrice: 0,
+            points: Math.floor(first.price / 100), // Sugerencia de puntos
+            category: 'Escolar',
+            colors: [{ color: 'Único', stock: 10 }],
+            images: []
+          });
+          setFormMode('edit');
+          alert(`✨ ¡Escaneado con éxito! Se detectaron ${extractedProducts.length} productos. Cargando el primero: ${first.name}`);
+        }
+      } else {
+        alert("No pude entender la lista. Intenta con una foto más clara 📸");
+      }
+    } catch (error) {
+      console.error("Error en Magic Scan:", error);
+      alert("Hubo un problema al conectar con la IA de Matita.");
+    } finally {
+      setIsScanning(false);
+      if (scanInputRef.current) scanInputRef.current.value = "";
+    }
   };
 
-  useEffect(() => { fetchProducts(); }, [supabase]);
+  // Función de carga optimizada con paginación y búsqueda
+  const fetchProducts = useCallback(async (isNewSearch = false) => {
+    if (isLoading) return;
+    setIsLoading(true);
+    
+    try {
+      const currentPage = isNewSearch ? 0 : page;
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase.from('products').select('*', { count: 'exact' });
+      
+      if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (data) {
+        const mapped = data.map((p: any) => ({ 
+          ...p, 
+          oldPrice: p.old_price, 
+          images: p.images || [], 
+          colors: p.colors || [],
+          description: p.description || ""
+        }));
+
+        if (isNewSearch) {
+          setProducts(mapped);
+          setPage(1);
+        } else {
+          setProducts(prev => [...prev, ...mapped]);
+          setPage(prev => prev + 1);
+        }
+
+        if (count !== null) {
+          setHasMore(from + data.length < count);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [supabase, page, searchTerm, isLoading]);
+
+  // Efecto para búsqueda con debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formMode === 'list') fetchProducts(true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm, formMode]);
 
   const exportInventory = () => {
     const headers = "Nombre,Precio,Puntos,Categoría\n";
@@ -290,7 +419,7 @@ const InventoryManager: React.FC = () => {
 
       alert('✨ ¡Sincronizado con éxito! PC y Celular actualizados.');
       setFormMode('list'); 
-      fetchProducts();
+      fetchProducts(true);
     } catch (err: any) {
       alert("Error al guardar: " + err.message);
     } finally {
@@ -342,34 +471,92 @@ const InventoryManager: React.FC = () => {
   if (formMode === 'list') {
     return (
       <div className="space-y-10">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col gap-2 w-full md:w-auto">
              <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">INVENTARIO 📦</h3>
-             <button onClick={exportInventory} className="text-[#f6a118] font-bold text-sm underline uppercase">EXPORTAR CSV ⬇️</button>
+             <button onClick={exportInventory} className="text-[#f6a118] font-bold text-sm underline uppercase text-left">EXPORTAR CSV ⬇️</button>
           </div>
-          <button 
-            onClick={() => { 
-              setEditingProduct({ name: '', description: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{color: 'Único', stock: 10}], images: [] }); 
-              setFormMode('edit'); 
-            }} 
-            className="px-6 py-3 bg-[#f6a118] text-white rounded-2xl font-bold text-xl shadow-md hover:scale-105 transition-all uppercase"
-          >
-            + NUEVO ARTÍCULO
-          </button>
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:max-w-xl">
+            <input 
+              type="text" 
+              placeholder="BUSCAR PRODUCTO... 🔍"
+              className="flex-grow px-6 py-3 rounded-2xl border-2 border-[#fadb31]/20 outline-none focus:border-[#fadb31] uppercase font-bold text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <input 
+                type="file" 
+                ref={scanInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleMagicScan} 
+              />
+              <button 
+                onClick={() => scanInputRef.current?.click()}
+                disabled={isScanning}
+                className="px-6 py-3 bg-[#fadb31] text-white rounded-2xl font-bold text-lg shadow-md hover:scale-105 transition-all uppercase whitespace-nowrap flex items-center gap-2"
+              >
+                {isScanning ? '⌛' : '📸 ESCÁNER'}
+              </button>
+              <button 
+                onClick={() => { 
+                  setEditingProduct({ name: '', description: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{color: 'Único', stock: 10}], images: [] }); 
+                  setFormMode('edit'); 
+                }} 
+                className="px-6 py-3 bg-[#f6a118] text-white rounded-2xl font-bold text-lg shadow-md hover:scale-105 transition-all uppercase whitespace-nowrap"
+              >
+                + NUEVO
+              </button>
+            </div>
+          </div>
         </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {products.map(p => (
-            <div key={p.id} className="bg-gray-50 p-4 rounded-[2rem] border-2 border-white shadow-sm hover:border-[#fadb31] transition-all flex flex-col h-full">
-              <img src={getImgUrl(p.images[0], 200)} className="w-full aspect-square object-cover rounded-2xl mb-3" />
+            <div key={p.id} className="bg-gray-50 p-4 rounded-[2rem] border-2 border-white shadow-sm hover:border-[#fadb31] transition-all flex flex-col h-full group">
+              <div className="relative overflow-hidden rounded-2xl mb-3 aspect-square">
+                <img 
+                  src={getImgUrl(p.images[0], 200)} 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                  loading="lazy"
+                />
+                {p.oldPrice && p.oldPrice > p.price && (
+                  <div className="absolute top-2 right-2 bg-[#ea7e9c] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Oferta</div>
+                )}
+              </div>
               <h4 className="text-sm font-bold truncate text-gray-800 uppercase">{p.name}</h4>
-              <p className="text-lg font-bold text-[#f6a118] mb-3">${p.price}</p>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-lg font-bold text-[#f6a118]">${p.price}</p>
+                <span className="text-[10px] font-bold text-gray-300 uppercase">{p.category}</span>
+              </div>
               <div className="flex gap-2 mt-auto">
-                <button onClick={() => { setEditingProduct(p); setFormMode('edit'); }} className="flex-grow py-2 bg-white text-[#f6a118] rounded-xl font-bold border border-[#fadb31] text-xs uppercase">EDITAR</button>
-                <button onClick={async () => { if(confirm('¿BORRAR?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(); } }} className="text-red-200">🗑️</button>
+                <button onClick={() => { setEditingProduct(p); setFormMode('edit'); }} className="flex-grow py-2 bg-white text-[#f6a118] rounded-xl font-bold border border-[#fadb31] text-xs uppercase hover:bg-[#fadb31] hover:text-white transition-colors">EDITAR</button>
+                <button onClick={async () => { if(confirm('¿BORRAR?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(true); } }} className="text-red-200 hover:text-red-500 transition-colors">🗑️</button>
               </div>
             </div>
           ))}
         </div>
+
+        {hasMore && (
+          <div className="flex justify-center pt-10">
+            <button 
+              onClick={() => fetchProducts(false)}
+              disabled={isLoading}
+              className="px-12 py-4 bg-white border-4 border-[#fadb31] text-[#f6a118] rounded-full font-bold hover:bg-[#fadb31] hover:text-white transition-all disabled:opacity-50 uppercase tracking-widest shadow-lg"
+            >
+              {isLoading ? 'CARGANDO...' : 'CARGAR MÁS PRODUCTOS 🔄'}
+            </button>
+          </div>
+        )}
+
+        {products.length === 0 && !isLoading && (
+          <div className="text-center py-20 opacity-30">
+            <p className="text-4xl mb-4">📦</p>
+            <p className="text-xl font-bold uppercase">No se encontraron productos</p>
+          </div>
+        )}
       </div>
     );
   }
