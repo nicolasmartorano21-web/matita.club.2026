@@ -4,23 +4,18 @@ import { Product, User } from '../types';
 import { useApp } from '../App';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area, PieChart, Pie, Legend 
+  ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area 
 } from 'recharts';
-import { 
-  Settings, Package, Users, Lightbulb, Image as ImageIcon, 
-  LogOut, Plus, Trash2, Edit3, Save, Search, Upload, 
-  Download, Copy, Key, ShieldCheck, UserCog, AlertCircle,
-  TrendingUp, ShoppingBag, Star, Mail, CheckCircle2, XCircle,
-  ChevronRight, ArrowRight, RefreshCcw, FileText
-} from 'lucide-react';
 
+// LIBRERÍAS PARA IMPORTACIÓN (Asegurate de tener el package.json que arreglamos antes)
 import * as XLSX from 'xlsx';
 import * as pdfjsLib from 'pdfjs-dist';
 
+// Configuración de soporte para PDF
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 /**
- * UTILERÍA DE IMÁGENES CLOUDINARY
+ * UTILERÍA DE IMÁGENES OPTIMIZADA
  */
 const getImgUrl = (id: string, w = 600) => {
   if (!id) return "https://via.placeholder.com/600x600?text=Matita";
@@ -28,7 +23,6 @@ const getImgUrl = (id: string, w = 600) => {
   return `https://res.cloudinary.com/dllm8ggob/image/upload/q_auto,f_auto,w_${w}/${id}`;
 };
 
-// --- COMPONENTE PRINCIPAL ---
 const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,235 +34,290 @@ const AdminPanel: React.FC = () => {
   const handleAdminAuth = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === 'matita2026') setIsAuthenticated(true);
-    else alert('Contraseña incorrecta ❌ Acceso denegado.');
+    else alert('Contraseña incorrecta ❌');
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fdfaf6] p-6 font-matita">
-        <div className="max-w-md w-full bg-white rounded-[4rem] p-12 shadow-2xl border-[12px] border-white text-center space-y-8 animate-fadeIn">
-          <div className="text-8xl animate-bounce">👑</div>
-          <h2 className="text-5xl font-black text-gray-800 uppercase tracking-tighter">Panel Maestro</h2>
-          <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Librería & Club Matita</p>
-          <form onSubmit={handleAdminAuth} className="space-y-6">
+      <div className="max-w-xl mx-auto py-20 px-6 animate-fadeIn">
+        <div className="bg-white rounded-[3rem] p-16 shadow-2xl border-4 border-[#fadb31] text-center space-y-10">
+          <div className="text-9xl mb-4">👑</div>
+          <h2 className="text-5xl font-bold text-gray-800 uppercase tracking-tighter">Panel Maestro</h2>
+          <form onSubmit={handleAdminAuth} className="space-y-8">
             <input
               type="password"
-              placeholder="CLAVE DE ACCESO"
-              className="w-full text-3xl text-center shadow-inner py-6 bg-[#fef9eb] rounded-3xl outline-none uppercase font-black border-4 border-transparent focus:border-[#fadb31] transition-all"
+              placeholder="CLAVE MATITA"
+              className="w-full text-3xl text-center shadow-inner py-5 bg-[#fef9eb] rounded-3xl outline-none uppercase font-bold"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <button className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase border-b-8 border-orange-700">
-              ENTRAR
+            <button className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-4xl font-bold shadow-lg hover:scale-105 transition-all uppercase">
+              Entrar
             </button>
           </form>
-          <button onClick={() => navigate('/')} className="text-gray-400 font-bold uppercase underline text-xs">Volver a la Tienda</button>
+          <button onClick={() => navigate('/')} className="text-gray-400 font-bold uppercase underline text-sm mt-4">
+            Volver a la Tienda
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto py-10 px-4 space-y-10 font-matita animate-fadeIn">
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 border-b-8 border-[#fadb31]/20 pb-10">
-        <div className="space-y-2">
-          <h2 className="text-6xl md:text-8xl font-black text-[#f6a118] uppercase tracking-tighter leading-none">
-            Gestión <span className="text-gray-800">MATITA</span>
-          </h2>
-          <p className="text-2xl text-gray-400 font-bold uppercase tracking-[0.3em]">Mando Central de Operaciones ✏️</p>
+    <div className="max-w-7xl mx-auto space-y-12 py-10 animate-fadeIn px-4">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b-4 border-[#fadb31]/20 pb-8">
+        <div>
+          <h2 className="text-5xl md:text-6xl font-bold text-[#f6a118] uppercase">Gestión MATITA</h2>
+          <div className="flex items-center gap-4 mt-2">
+            <p className="text-xl md:text-2xl text-gray-400 italic uppercase">ESTADÍSTICAS Y CONTROL REAL ✏️</p>
+          </div>
         </div>
-
-        <div className="flex flex-wrap gap-3 bg-white p-4 rounded-[3rem] shadow-xl border-4 border-white">
-          {[
-            { id: 'dashboard', label: '📊 Stats', icon: TrendingUp },
-            { id: 'inventory', label: '📦 Stock', icon: Package },
-            { id: 'sales', label: '💸 Ventas', icon: ShoppingBag },
-            { id: 'socios', label: '👥 Socios', icon: Users },
-            { id: 'ideas', label: '💡 Ideas', icon: Lightbulb },
-            { id: 'design', label: '🎨 Marca', icon: ImageIcon },
-            { id: 'carousel', label: '🖼️ Inicio', icon: Settings }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-4 rounded-[1.8rem] text-lg font-black transition-all uppercase flex items-center gap-2 ${activeTab === tab.id ? 'matita-gradient-orange text-white shadow-lg scale-110' : 'text-gray-400 hover:bg-gray-50'}`}
-            >
-              <tab.icon size={20} />
-              <span className="hidden md:inline">{tab.label.split(' ')[1]}</span>
-            </button>
-          ))}
-          <button onClick={() => setIsAuthenticated(false)} className="px-6 py-4 bg-red-50 text-red-400 rounded-[1.8rem] font-black uppercase hover:bg-red-500 hover:text-white transition-all shadow-md">
-            <LogOut size={24} />
+        <div className="flex flex-wrap gap-4 justify-center items-center">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[
+              { id: 'dashboard', label: '📊 Stats' },
+              { id: 'inventory', label: '📦 Stock' },
+              { id: 'sales', label: '💸 Ventas' },
+              { id: 'socios', label: '👥 Socios' },
+              { id: 'ideas', label: '💡 Ideas' },
+              { id: 'design', label: '🎨 Marca' },
+              { id: 'carousel', label: '🖼️ Carrusel' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-5 py-2 md:px-8 md:py-3 rounded-[1.5rem] text-lg md:text-xl font-bold transition-all uppercase ${activeTab === tab.id ? 'matita-gradient-orange text-white shadow-lg scale-110' : 'bg-white text-gray-400 hover:text-[#f6a118]'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setIsAuthenticated(false)} className="px-8 py-3 bg-[#ea7e9c] text-white rounded-2xl font-bold text-lg shadow-xl hover:scale-110 transition-all uppercase flex items-center gap-2 border-4 border-white">
+            SALIR DEL PANEL 🚪
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-[4rem] md:rounded-[5rem] shadow-matita p-8 md:p-16 border-[12px] border-white min-h-[800px] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#fadb31]/5 rounded-full -mr-32 -mt-32 -z-0"></div>
-        <div className="relative z-10">
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'inventory' && <InventoryManager />}
-          {activeTab === 'sales' && <SalesManager />}
-          {activeTab === 'socios' && <SociosManager />}
-          {activeTab === 'ideas' && <IdeasManager />}
-          {activeTab === 'design' && <DesignManager />}
-          {activeTab === 'carousel' && <CarouselManager />}
-        </div>
+      <div className="bg-white rounded-[3rem] md:rounded-[4rem] shadow-matita p-6 md:p-14 border-[8px] border-white min-h-[600px]">
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'inventory' && <InventoryManager />}
+        {activeTab === 'sales' && <SalesManager />}
+        {activeTab === 'socios' && <SociosManager />}
+        {activeTab === 'ideas' && <IdeasManager />}
+        {activeTab === 'design' && <DesignManager />}
+        {activeTab === 'carousel' && <CarouselManager />}
       </div>
     </div>
   );
 };
 
-// --- COMPONENTE: DASHBOARD ---
 const Dashboard: React.FC = () => {
   const { supabase } = useApp();
   const [data, setData] = useState<any>({
-    history: [], cats: [], lowStock: [],
-    totals: { money: 0, users: 0, products: 0, points: 0 }
+    salesHistory: [],
+    categoryStats: [],
+    lowStock: [],
+    totals: { sales: 0, users: 0, products: 0 }
   });
 
   useEffect(() => {
-    const loadStats = async () => {
+    const fetchDashboard = async () => {
       const { data: sales } = await supabase.from('sales').select('*').order('created_at', { ascending: true });
-      const { count: users } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
       const { data: prods } = await supabase.from('products').select('*');
-      const { data: pointsData } = await supabase.from('users').select('points');
 
       if (sales && prods) {
         const history = sales.map((s: any) => ({
-          date: new Date(s.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }),
+          date: new Date(s.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
           amount: s.total
         }));
 
         const catMap: any = {};
         sales.forEach((s: any) => {
-          const c = s.category_summary || 'Varios';
-          catMap[c] = (catMap[c] || 0) + s.total;
+          const cat = s.category_summary || 'Varios';
+          catMap[cat] = (catMap[cat] || 0) + s.total;
         });
+        const categories = Object.keys(catMap).map(k => ({ name: k, total: catMap[k] }));
 
-        const low = prods.filter((p: any) => {
-          const stock = p.colors?.reduce((a: number, c: any) => a + (Number(c.stock) || 0), 0) || 0;
-          return stock < 5;
+        const lowStock = prods.filter((p: any) => {
+          const totalStock = p.colors?.reduce((acc: number, c: any) => acc + (Number(c.stock) || 0), 0) || 0;
+          return totalStock < 5;
         });
 
         setData({
-          history,
-          cats: Object.keys(catMap).map(k => ({ name: k, value: catMap[k] })),
-          lowStock: low,
+          salesHistory: history,
+          categoryStats: categories,
+          lowStock,
           totals: {
-            money: sales.reduce((a, b) => a + b.total, 0),
-            users: users || 0,
-            products: prods.length,
-            points: pointsData?.reduce((a, b) => a + (b.points || 0), 0) || 0
+            sales: sales.reduce((a: number, b: any) => a + b.total, 0),
+            users: usersCount || 0,
+            products: prods.length || 0
           }
         });
       }
     };
-    loadStats();
+    fetchDashboard();
   }, [supabase]);
 
   const COLORS = ['#f6a118', '#ea7e9c', '#fadb31', '#93c5fd', '#86efac'];
 
   return (
     <div className="space-y-16 animate-fadeIn">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <div className="bg-[#fef9eb] p-10 rounded-[3.5rem] border-4 border-white shadow-sm group">
-          <p className="text-lg font-black text-gray-400 uppercase tracking-widest mb-2">Ingresos</p>
-          <p className="text-5xl font-black text-[#f6a118]">${data.totals.money.toLocaleString()}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-[#fef9eb] p-8 rounded-[2.5rem] text-center border-4 border-white shadow-sm">
+          <p className="text-xl text-gray-400 font-bold uppercase">Ingresos Totales</p>
+          <p className="text-4xl font-bold text-[#f6a118]">${data.totals.sales.toLocaleString()}</p>
         </div>
-        <div className="bg-[#fff1f2] p-10 rounded-[3.5rem] border-4 border-white shadow-sm group">
-          <p className="text-lg font-black text-gray-400 uppercase tracking-widest mb-2">Socios</p>
-          <p className="text-5xl font-black text-[#ea7e9c]">{data.totals.users}</p>
+        <div className="bg-[#fff1f2] p-8 rounded-[2.5rem] text-center border-4 border-white shadow-sm">
+          <p className="text-xl text-gray-400 font-bold uppercase">Socios</p>
+          <p className="text-4xl font-bold text-[#ea7e9c]">{data.totals.users}</p>
         </div>
-        <div className="bg-[#f0f9ff] p-10 rounded-[3.5rem] border-4 border-white shadow-sm group">
-          <p className="text-lg font-black text-gray-400 uppercase tracking-widest mb-2">Artículos</p>
-          <p className="text-5xl font-black text-blue-400">{data.totals.products}</p>
-        </div>
-        <div className="bg-[#f0fdf4] p-10 rounded-[3.5rem] border-4 border-white shadow-sm group">
-          <p className="text-lg font-black text-gray-400 uppercase tracking-widest mb-2">Puntos Club</p>
-          <p className="text-5xl font-black text-green-400">{data.totals.points}</p>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-12">
-        <div className="bg-gray-50 p-10 rounded-[4rem] border-4 border-white h-[500px] shadow-inner">
-          <h4 className="text-3xl font-black mb-8 uppercase tracking-tighter flex items-center gap-3">
-            <TrendingUp className="text-[#f6a118]" /> Tendencia de Ventas
-          </h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data.history}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ddd" />
-              <XAxis dataKey="date" hide />
-              <YAxis stroke="#ccc" fontSize={12} />
-              <Tooltip contentStyle={{ borderRadius: '25px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
-              <Area type="monotone" dataKey="amount" stroke="#f6a118" strokeWidth={6} fill="#fadb31" fillOpacity={0.2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-gray-50 p-10 rounded-[4rem] border-4 border-white h-[500px] shadow-inner">
-          <h4 className="text-3xl font-black mb-8 uppercase tracking-tighter flex items-center gap-3">
-            <Star className="text-[#ea7e9c]" /> Categorías Top
-          </h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data.cats}
-                innerRadius={80}
-                outerRadius={140}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {data.cats.map((_: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="bg-[#f0f9ff] p-8 rounded-[2.5rem] text-center border-4 border-white shadow-sm">
+          <p className="text-xl text-gray-400 font-bold uppercase">Items Catálogo</p>
+          <p className="text-4xl font-bold text-blue-400">{data.totals.products}</p>
         </div>
       </div>
 
       {data.lowStock.length > 0 && (
-        <div className="bg-red-50 p-10 rounded-[4rem] border-8 border-white shadow-xl animate-pulse">
-          <div className="flex items-center gap-4 mb-6">
-            <AlertCircle className="text-red-500" size={48} />
-            <h4 className="text-4xl font-black text-red-600 uppercase tracking-tighter">Stock Crítico</h4>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-red-50 p-8 rounded-[2.5rem] border-4 border-white shadow-sm">
+          <h4 className="text-2xl font-bold text-red-500 mb-4 flex items-center gap-2 uppercase tracking-tighter">⚠️ ALERTA DE REPOSICIÓN</h4>
+          <div className="flex flex-wrap gap-4">
             {data.lowStock.map((p: any) => (
-              <div key={p.id} className="bg-white p-4 rounded-3xl border-2 border-red-100 flex items-center gap-3">
-                <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-500 font-bold">!</div>
-                <p className="text-sm font-black text-gray-700 uppercase truncate">{p.name}</p>
+              <div key={p.id} className="bg-white px-4 py-2 rounded-xl text-sm font-bold text-gray-500 border border-red-100 uppercase">
+                {p.name}
               </div>
             ))}
           </div>
         </div>
       )}
+
+      <div className="grid lg:grid-cols-2 gap-16">
+        <div className="space-y-6">
+          <h4 className="text-3xl font-bold text-gray-700 ml-4 uppercase tracking-tighter">TENDENCIA DE VENTAS 💸</h4>
+          <div className="h-[350px] w-full bg-[#fdfaf6] p-4 rounded-[2.5rem] border-2 border-white shadow-inner">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.salesHistory}>
+                <defs>
+                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f6a118" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#f6a118" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="date" stroke="#999" fontSize={10} />
+                <YAxis stroke="#999" fontSize={10} />
+                <Tooltip />
+                <Area type="monotone" dataKey="amount" stroke="#f6a118" fillOpacity={1} fill="url(#colorSales)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <h4 className="text-3xl font-bold text-gray-700 ml-4 uppercase tracking-tighter">VENTAS POR CATEGORÍA 🏷️</h4>
+          <div className="h-[350px] w-full bg-[#fdfaf6] p-4 rounded-[2.5rem] border-2 border-white shadow-inner">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.categoryStats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="name" stroke="#999" fontSize={10} />
+                <YAxis stroke="#999" fontSize={10} />
+                <Tooltip />
+                <Bar dataKey="total">
+                  {data.categoryStats.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-// --- COMPONENTE: INVENTORY MANAGER ---
 const InventoryManager: React.FC = () => {
   const { supabase } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [formMode, setFormMode] = useState<'list' | 'edit'>('list');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const importInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 15;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkImportRef = useRef<HTMLInputElement>(null);
 
-  const fetchProducts = useCallback(async () => {
-    let q = supabase.from('products').select('*');
-    if (searchTerm) q = q.ilike('name', `%${searchTerm}%`);
-    const { data } = await q.order('created_at', { ascending: false });
-    if (data) setProducts(data.map((p: any) => ({ ...p, oldPrice: p.old_price, images: p.images || [], colors: p.colors || [] })));
-  }, [supabase, searchTerm]);
+  const fetchProducts = useCallback(async (isNewSearch = false) => {
+    if (isLoading) return;
+    setIsLoading(true);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+    try {
+      const currentPage = isNewSearch ? 0 : page;
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
 
+      let query = supabase.from('products').select('*', { count: 'exact' });
+      if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
+
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (data) {
+        const mapped = data.map((p: any) => ({
+          ...p,
+          oldPrice: p.old_price,
+          images: p.images || [],
+          colors: p.colors || [],
+          description: p.description || ""
+        }));
+
+        if (isNewSearch) {
+          setProducts(mapped);
+          setPage(1);
+        } else {
+          setProducts(prev => [...prev, ...mapped]);
+          setPage(prev => prev + 1);
+        }
+
+        if (count !== null) {
+          setHasMore(from + data.length < count);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [supabase, page, searchTerm, isLoading]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formMode === 'list') fetchProducts(true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm, formMode]);
+
+  const handleClone = (p: Product) => {
+    const clone = { 
+      ...p, 
+      id: undefined, 
+      name: `${p.name} (COPIA)`, 
+      created_at: undefined 
+    };
+    setEditingProduct(clone);
+    setFormMode('edit');
+  };
+
+  /**
+   * MANEJADOR MASIVO: CSV, EXCEL, PDF
+   */
   const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -276,262 +325,363 @@ const InventoryManager: React.FC = () => {
     let newItems: any[] = [];
 
     try {
-      if (ext === 'xlsx' || ext === 'xls') {
+      if (ext === 'csv') {
+        const text = await file.text();
+        const rows = text.split("\n").slice(1);
+        newItems = rows.map(row => {
+          const parts = row.split(",");
+          if (parts.length < 2) return null;
+          return { name: parts[0].trim(), price: Number(parts[1]) || 0, category: parts[2]?.trim() || "Escolar", colors: [{ color: 'Único', stock: 10 }], images: [] };
+        }).filter(i => i !== null);
+      } 
+      else if (ext === 'xlsx' || ext === 'xls') {
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data);
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-        newItems = json.map(r => {
-          const keys = Object.keys(r);
-          const find = (arr: string[]) => keys.find(k => arr.some(word => k.toLowerCase().includes(word)));
-          const nK = find(['nom', 'prod', 'art', 'item']) || keys[0];
-          const pK = find(['prec', 'val', 'cost']) || keys[1];
-          const dK = find(['desc', 'info', 'detal']) || keys[2];
-          const cK = find(['cat', 'tipo']);
-
-          return {
-            name: String(r[nK] || 'Sin Nombre').trim().toUpperCase(),
-            price: Number(String(r[pK]).replace(/[^0-9.]/g, '')) || 0,
-            description: r[dK] ? String(r[dK]) : "",
-            category: r[cK] ? String(r[cK]) : "Otros",
-            colors: [{ color: 'Único', stock: 10 }],
-            images: []
-          };
-        });
-      } else if (ext === 'pdf') {
+        newItems = json.map(r => ({
+          name: r.Nombre || r.name || Object.values(r)[0],
+          price: Number(r.Precio || r.price || Object.values(r)[1]) || 0,
+          category: r.Categoria || r.category || "Escolar",
+          colors: [{ color: 'Único', stock: 10 }],
+          images: []
+        }));
+      } 
+      else if (ext === 'pdf') {
         const data = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data }).promise;
-        let fullText = "";
+        let text = "";
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          fullText += content.items.map((it: any) => it.str).join(" ") + "\n";
+          text += content.items.map((it: any) => it.str).join(" ") + "\n";
         }
-        const lines = fullText.split("\n");
+        // Lógica simple: cada línea con un "-" o un "$" se asume producto
+        const lines = text.split("\n");
         newItems = lines.map(line => {
-          const regex = /^(.+?)\s+[\$]?\s?(\d+[\d\.,]*)$/;
-          const match = line.trim().match(regex);
-          if (match) {
-            return {
-              name: match[1].trim().toUpperCase(),
-              price: parseFloat(match[2].replace(',', '.')) || 0,
-              category: "Escolar",
-              colors: [{ color: 'Único', stock: 5 }],
-              images: []
-            };
+          const parts = line.split(/[-|$]/);
+          if (parts.length >= 2) {
+            return { name: parts[0].trim(), price: parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0, category: "Escolar", colors: [{ color: 'Único', stock: 10 }], images: [] };
           }
           return null;
-        }).filter(i => i !== null);
+        }).filter(i => i !== null && i.name.length > 3);
       }
 
       if (newItems.length > 0) {
-        if (confirm(`¿Cargar ${newItems.length} artículos al sistema?`)) {
-          const { error } = await supabase.from('products').insert(newItems);
-          if (error) throw error;
-          fetchProducts();
-          alert("¡Importación exitosa! 🚀");
+        if (confirm(`¿Cargar ${newItems.length} productos detectados?`)) {
+          await supabase.from('products').insert(newItems);
+          fetchProducts(true);
         }
       }
-    } catch (err) { alert("Error procesando archivo."); }
-    if (importInputRef.current) importInputRef.current.value = "";
-  };
-
-  const handleSaveProduct = async () => {
-    if (!editingProduct?.name) return alert("El nombre es obligatorio");
-    setIsSaving(true);
-    const payload = {
-      ...editingProduct,
-      price: Number(editingProduct.price),
-      old_price: Number(editingProduct.oldPrice),
-      points: Number(editingProduct.points),
-      colors: editingProduct.colors?.map(c => ({ ...c, stock: Number(c.stock) }))
-    };
-    const { error } = editingProduct.id 
-      ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
-      : await supabase.from('products').insert(payload);
-    
-    if (!error) {
-      setFormMode('list');
-      fetchProducts();
-      alert("¡Tesoro guardado! ✨");
+    } catch (err) {
+      alert("Error al procesar el archivo");
     }
-    setIsSaving(false);
   };
 
-  const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    const file = e.target.files[0];
+  const handleStockChange = (idx: number, value: string) => {
+    if (!editingProduct?.colors) return;
+    const next = [...editingProduct.colors];
+    const finalValue = value === "" ? ("" as any) : parseInt(value, 10);
+    next[idx].stock = finalValue;
+    setEditingProduct({ ...editingProduct, colors: next });
+  };
+
+  const updateStockByDelta = (idx: number, delta: number) => {
+    if (!editingProduct?.colors) return;
+    const next = [...editingProduct.colors];
+    const current = Number(next[idx].stock) || 0;
+    next[idx].stock = Math.max(0, current + delta);
+    setEditingProduct({ ...editingProduct, colors: next });
+  };
+
+  const handleSave = async () => {
+    if (!editingProduct?.name) return alert('¡Escribe el nombre del tesoro!');
+
+    setIsSaving(true);
+    try {
+      const cleanColors = editingProduct.colors?.map(c => ({
+        ...c,
+        stock: Number(c.stock) || 0
+      })) || [{ color: 'Único', stock: 1 }];
+
+      const payload = {
+        name: editingProduct.name,
+        description: editingProduct.description || "",
+        price: Number(editingProduct.price) || 0,
+        old_price: Number(editingProduct.oldPrice) || 0,
+        points: Number(editingProduct.points) || 0,
+        category: editingProduct.category || "Escolar",
+        images: editingProduct.images || [],
+        colors: cleanColors
+      };
+
+      const { error } = editingProduct.id
+        ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
+        : await supabase.from('products').insert(payload);
+
+      if (error) throw error;
+
+      alert('✨ ¡Sincronizado con éxito!');
+      setFormMode('list');
+      fetchProducts(true);
+    } catch (err: any) {
+      alert("Error al guardar: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const uploadImageToCloudinary = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", "Matita_web");
-    const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.public_id) {
-      setEditingProduct(prev => ({ ...prev!, images: [...(prev?.images || []), data.public_id] }));
+    formData.append("folder", "matita2026");
+    try {
+      const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      return data.public_id;
+    } catch (error) {
+      console.error("Cloudinary error:", error);
+      return null;
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    const uploadedIds: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const publicId = await uploadImageToCloudinary(files[i]);
+      if (publicId) uploadedIds.push(publicId);
+    }
+
+    setEditingProduct(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        images: [...(prev.images || []), ...uploadedIds]
+      };
+    });
+
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   if (formMode === 'list') {
     return (
-      <div className="space-y-12">
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-8 bg-gray-50 p-8 rounded-[4rem] border-4 border-white shadow-inner">
-          <div className="space-y-2">
-            <h3 className="text-4xl font-black uppercase tracking-tighter">Catálogo Vital 📦</h3>
-            <input type="file" ref={importInputRef} className="hidden" accept=".xlsx,.xls,.pdf" onChange={handleBulkImport} />
-            <button onClick={() => importInputRef.current?.click()} className="text-[#ea7e9c] font-black text-sm underline uppercase tracking-widest flex items-center gap-2 hover:text-red-500">
-              <Upload size={16} /> Importar Excel / PDF
-            </button>
+      <div className="space-y-10">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">INVENTARIO 📦</h3>
+            <div className="flex gap-4">
+              <input type="file" ref={bulkImportRef} className="hidden" accept=".csv, .xlsx, .xls, .pdf" onChange={handleBulkImport} />
+              <button onClick={() => bulkImportRef.current?.click()} className="text-[#ea7e9c] font-bold text-xs underline uppercase">Importar (Excel/PDF/CSV) ⬆️</button>
+            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto">
-            <div className="relative flex-grow lg:w-96">
-              <Search className="absolute left-5 top-5 text-gray-300" />
-              <input 
-                type="text" 
-                placeholder="BUSCAR EN EL ALMACÉN..." 
-                className="w-full p-5 pl-14 rounded-3xl bg-white border-4 border-transparent focus:border-[#fadb31] outline-none font-bold uppercase transition-all shadow-md"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <button 
-              onClick={() => { setEditingProduct({ name: '', price: 0, category: 'Escolar', colors: [{ color: 'Único', stock: 10 }], images: [] }); setFormMode('edit'); }}
-              className="px-10 py-5 matita-gradient-orange text-white rounded-3xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase flex items-center gap-3 border-b-8 border-orange-700"
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:max-w-xl">
+            <input
+              type="text"
+              placeholder="BUSCAR PRODUCTO... 🔍"
+              className="flex-grow px-6 py-3 rounded-2xl border-2 border-[#fadb31]/20 outline-none focus:border-[#fadb31] uppercase font-bold text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                setEditingProduct({ name: '', description: '', price: 0, oldPrice: 0, points: 0, category: 'Escolar', colors: [{ color: 'Único', stock: 10 }], images: [] });
+                setFormMode('edit');
+              }}
+              className="px-6 py-3 bg-[#f6a118] text-white rounded-2xl font-bold text-lg shadow-md hover:scale-105 transition-all uppercase whitespace-nowrap"
             >
-              <Plus /> NUEVO
+              + NUEVO
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {products.map(p => (
-            <div key={p.id} className="bg-white p-6 rounded-[3.5rem] border-8 border-gray-50 shadow-sm hover:border-[#fadb31] transition-all group relative">
-              <div className="aspect-square rounded-[2.5rem] overflow-hidden mb-6 bg-gray-50">
-                <img src={getImgUrl(p.images[0], 400)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+            <div key={p.id} className="bg-gray-50 p-4 rounded-[2rem] border-2 border-white shadow-sm hover:border-[#fadb31] transition-all flex flex-col h-full group relative">
+              <button onClick={() => handleClone(p)} className="absolute top-6 right-6 z-10 bg-white/90 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all hover:bg-[#fadb31]">📑</button>
+              <div className="relative overflow-hidden rounded-2xl mb-3 aspect-square">
+                <img
+                  src={getImgUrl(p.images[0], 200)}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
+                />
               </div>
-              <p className="text-[10px] font-black text-[#fadb31] uppercase mb-1">{p.category}</p>
-              <h4 className="text-sm font-black uppercase text-gray-800 truncate mb-2">{p.name}</h4>
-              <div className="flex justify-between items-end">
-                <p className="text-3xl font-black text-[#f6a118] leading-none">${p.price}</p>
-                <div className="flex gap-2">
-                  <button onClick={() => { setEditingProduct(p); setFormMode('edit'); }} className="p-3 bg-gray-100 text-gray-400 rounded-2xl hover:bg-blue-400 hover:text-white transition-all"><Edit3 size={16}/></button>
-                  <button onClick={async () => { if(confirm('¿BORRAR?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(); } }} className="p-3 bg-gray-100 text-gray-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16}/></button>
-                </div>
+              <h4 className="text-sm font-bold truncate text-gray-800 uppercase">{p.name}</h4>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-lg font-bold text-[#f6a118]">${p.price}</p>
+                <span className="text-[10px] font-bold text-gray-300 uppercase">{p.category}</span>
+              </div>
+              <div className="flex gap-2 mt-auto">
+                <button onClick={() => { setEditingProduct(p); setFormMode('edit'); }} className="flex-grow py-2 bg-white text-[#f6a118] rounded-xl font-bold border border-[#fadb31] text-xs uppercase hover:bg-[#fadb31] hover:text-white transition-colors">EDITAR</button>
+                <button onClick={async () => { if (confirm('¿BORRAR?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(true); } }} className="text-red-200 hover:text-red-500 transition-colors">🗑️</button>
               </div>
             </div>
           ))}
         </div>
+
+        {hasMore && (
+          <div className="flex justify-center pt-10">
+            <button
+              onClick={() => fetchProducts(false)}
+              disabled={isLoading}
+              className="px-12 py-4 bg-white border-4 border-[#fadb31] text-[#f6a118] rounded-full font-bold hover:bg-[#fadb31] hover:text-white transition-all disabled:opacity-50 uppercase tracking-widest shadow-lg"
+            >
+              {isLoading ? 'CARGANDO...' : 'CARGAR MÁS PRODUCTOS 🔄'}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 animate-fadeIn">
-      <div className="flex items-center gap-8">
-        <button onClick={() => setFormMode('list')} className="w-20 h-20 bg-gray-100 rounded-[2.5rem] flex items-center justify-center text-gray-400 hover:text-gray-800 transition-all shadow-md">
-          <ArrowRight className="rotate-180" size={32} />
-        </button>
-        <h3 className="text-5xl font-black uppercase tracking-tighter">Editor de Tesoros ✨</h3>
+    <div className="space-y-8 animate-fadeIn max-w-4xl mx-auto">
+      <div className="flex items-center gap-6">
+        <button onClick={() => setFormMode('list')} className="text-4xl hover:scale-110 transition-all uppercase">🔙</button>
+        <h3 className="text-3xl font-bold text-gray-800 uppercase tracking-tighter">EDITOR DE PRODUCTO</h3>
       </div>
 
-      <div className="bg-[#fef9eb] p-12 rounded-[5rem] border-[12px] border-white shadow-2xl space-y-12">
-        <div className="grid md:grid-cols-2 gap-10">
-          <div className="space-y-4">
-            <label className="text-sm font-black text-gray-400 ml-6 uppercase">Nombre Oficial</label>
-            <input type="text" className="w-full text-3xl p-8 rounded-[3rem] outline-none shadow-inner uppercase font-black bg-white focus:bg-white border-4 border-transparent focus:border-[#fadb31] transition-all" value={editingProduct?.name} onChange={e => setEditingProduct({...editingProduct!, name: e.target.value})} />
+      <div className="bg-[#fef9eb] p-8 md:p-12 rounded-[3.5rem] border-4 border-white space-y-8 shadow-xl max-h-[85vh] overflow-y-auto scrollbar-hide">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-1">
+            <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Nombre del Tesoro</label>
+            <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase font-bold" value={editingProduct?.name || ''} onChange={e => setEditingProduct({ ...editingProduct!, name: e.target.value })} />
           </div>
-          <div className="space-y-4">
-            <label className="text-sm font-black text-gray-400 ml-6 uppercase">Categoría</label>
-            <select className="w-full text-3xl p-8 rounded-[3rem] outline-none shadow-inner font-black uppercase appearance-none bg-white border-4 border-transparent focus:border-[#fadb31]" value={editingProduct?.category} onChange={e => setEditingProduct({...editingProduct!, category: e.target.value as any})}>
-              {['Escolar', 'Oficina', 'Tecnología', 'Novedades', 'Ofertas', 'Otros'].map(c => <option key={c} value={c}>{c}</option>)}
+          <div className="space-y-1">
+            <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Categoría</label>
+            <select className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase font-bold" value={editingProduct?.category} onChange={e => setEditingProduct({ ...editingProduct!, category: e.target.value as any })}>
+              {['Escolar', 'Otros', 'Oficina', 'Tecnología', 'Novedades', 'Ofertas'].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
 
+        <div className="space-y-1">
+          <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Descripción</label>
+          <textarea
+            className="w-full text-xl p-6 rounded-[2rem] outline-none shadow-inner min-h-[150px] font-matita bg-white border-2 border-[#fadb31]/20"
+            value={editingProduct?.description || ''}
+            onChange={e => setEditingProduct({ ...editingProduct!, description: e.target.value })}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Precio ($)</label>
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner font-bold" value={editingProduct?.price || ''} onFocus={e => e.target.select()} onChange={e => setEditingProduct({ ...editingProduct!, price: Number(e.target.value) })} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Antes ($)</label>
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner font-bold" value={editingProduct?.oldPrice || ''} onFocus={e => e.target.select()} onChange={e => setEditingProduct({ ...editingProduct!, oldPrice: Number(e.target.value) })} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Puntos ✨</label>
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner font-bold" value={editingProduct?.points || ''} onFocus={e => e.target.select()} onChange={e => setEditingProduct({ ...editingProduct!, points: Number(e.target.value) })} />
+          </div>
+        </div>
+
         <div className="space-y-4">
-          <label className="text-sm font-black text-gray-400 ml-6 uppercase">Descripción del Tesoro</label>
-          <textarea className="w-full text-xl p-8 rounded-[3.5rem] outline-none shadow-inner min-h-[250px] font-bold bg-white focus:bg-white border-4 border-transparent focus:border-[#fadb31] transition-all" value={editingProduct?.description} onChange={e => setEditingProduct({...editingProduct!, description: e.target.value})} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="space-y-4 bg-white p-8 rounded-[3.5rem] shadow-sm">
-            <label className="text-xs font-black text-gray-300 uppercase">Precio Actual ($)</label>
-            <input type="number" className="w-full text-5xl font-black text-[#f6a118] outline-none bg-transparent" value={editingProduct?.price} onChange={e => setEditingProduct({...editingProduct!, price: Number(e.target.value)})} />
+          <div className="flex justify-between items-center px-4">
+            <h4 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Variantes y Stock</h4>
+            <button onClick={() => setEditingProduct({ ...editingProduct!, colors: [...(editingProduct?.colors || []), { color: 'Nuevo', stock: 10 }] })} className="text-[#f6a118] font-bold uppercase tracking-widest">+ AÑADIR</button>
           </div>
-          <div className="space-y-4 bg-white p-8 rounded-[3.5rem] shadow-sm">
-            <label className="text-xs font-black text-gray-300 uppercase">Precio Tachado ($)</label>
-            <input type="number" className="w-full text-5xl font-black text-gray-300 outline-none bg-transparent" value={editingProduct?.oldPrice} onChange={e => setEditingProduct({...editingProduct!, oldPrice: Number(e.target.value)})} />
-          </div>
-          <div className="space-y-4 bg-white p-8 rounded-[3.5rem] shadow-sm">
-            <label className="text-xs font-black text-gray-300 uppercase">Puntos Club ✨</label>
-            <input type="number" className="w-full text-5xl font-black text-blue-400 outline-none bg-transparent" value={editingProduct?.points} onChange={e => setEditingProduct({...editingProduct!, points: Number(e.target.value)})} />
-          </div>
-        </div>
-
-        {/* VARIANTES */}
-        <div className="space-y-8">
-          <div className="flex justify-between items-center px-6">
-            <h4 className="text-3xl font-black uppercase text-gray-800 tracking-tighter">Variantes & Almacén</h4>
-            <button onClick={() => setEditingProduct({...editingProduct!, colors: [...(editingProduct?.colors || []), { color: 'NUEVO', stock: 10 }]})} className="text-[#f6a118] font-black uppercase text-sm flex items-center gap-2 hover:scale-110 transition-transform">
-              <Plus size={16}/> AÑADIR VARIANTE
-            </button>
-          </div>
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {editingProduct?.colors?.map((c, i) => (
-              <div key={i} className="flex items-center gap-6 bg-white p-8 rounded-[3.5rem] shadow-sm border-4 border-white group">
-                <input className="flex-grow text-3xl font-black outline-none uppercase bg-transparent" value={c.color} onChange={e => {
-                  const n = [...editingProduct.colors!]; n[i].color = e.target.value; setEditingProduct({...editingProduct!, colors: n});
+              <div key={i} className="flex items-center gap-4 bg-white p-4 rounded-2xl border-2 border-white shadow-sm">
+                <input className="flex-grow border-none text-xl font-bold p-0 bg-transparent outline-none uppercase" value={c.color} onChange={e => {
+                  const n = [...editingProduct.colors!]; n[i].color = e.target.value; setEditingProduct({ ...editingProduct, colors: n });
                 }} />
-                <div className="flex items-center gap-8 bg-gray-50 px-10 py-4 rounded-full border-4 border-white shadow-inner">
-                   <button onClick={() => { const n = [...editingProduct.colors!]; n[i].stock = Math.max(0, n[i].stock - 1); setEditingProduct({...editingProduct!, colors: n}); }} className="text-5xl text-red-300 hover:text-red-500 transition-colors">-</button>
-                   <input type="number" className="w-24 text-center bg-transparent text-4xl font-black outline-none" value={c.stock} onChange={e => {
-                     const n = [...editingProduct.colors!]; n[i].stock = parseInt(e.target.value) || 0; setEditingProduct({...editingProduct!, colors: n});
-                   }} />
-                   <button onClick={() => { const n = [...editingProduct.colors!]; n[i].stock += 1; setEditingProduct({...editingProduct!, colors: n}); }} className="text-5xl text-[#f6a118] hover:text-orange-600 transition-colors">+</button>
+                <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-full border-2 border-gray-100">
+                  <button onClick={() => updateStockByDelta(i, -1)} className="text-3xl text-[#ea7e9c] font-bold active:scale-125 transition-transform">-</button>
+                  <input
+                    type="number"
+                    className="w-16 bg-transparent text-center text-2xl font-bold outline-none border-b-2 border-[#fadb31]"
+                    value={c.stock}
+                    onFocus={e => e.target.select()}
+                    onChange={(e) => handleStockChange(i, e.target.value)}
+                  />
+                  <button onClick={() => updateStockByDelta(i, 1)} className="text-3xl text-[#f6a118] font-bold active:scale-125 transition-transform">+</button>
                 </div>
-                <button onClick={() => setEditingProduct({...editingProduct!, colors: editingProduct.colors?.filter((_, idx) => idx !== i)})} className="text-red-200 hover:text-red-500 transition-colors"><Trash2 size={28}/></button>
+                <button onClick={() => setEditingProduct({ ...editingProduct, colors: editingProduct.colors?.filter((_, idx) => idx !== i) })} className="text-red-200 text-3xl">×</button>
               </div>
             ))}
           </div>
         </div>
 
-        {/* FOTOS */}
-        <div className="space-y-8">
-           <h4 className="text-3xl font-black uppercase text-gray-800 tracking-tighter px-6">Galería Visual</h4>
-           <div className="flex flex-wrap gap-6 px-6">
-              {editingProduct?.images?.map((img, i) => (
-                <div key={i} className="relative w-48 h-48 group">
-                  <img src={getImgUrl(img, 400)} className="w-full h-full object-cover rounded-[3rem] border-8 border-white shadow-xl group-hover:scale-105 transition-transform" />
-                  <button onClick={() => setEditingProduct({...editingProduct!, images: editingProduct.images?.filter((_, idx) => idx !== i)})} className="absolute -top-3 -right-3 bg-red-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-2xl font-black text-xl hover:scale-110 transition-all">×</button>
-                </div>
-              ))}
-              <label className="w-48 h-48 bg-white rounded-[3rem] border-4 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-white hover:border-[#fadb31] transition-all group shadow-inner">
-                <ImageIcon size={48} className="text-gray-200 group-hover:text-[#fadb31] transition-colors" />
-                <span className="mt-2 text-[10px] font-black text-gray-300 uppercase">Añadir Foto</span>
-                <input type="file" className="hidden" accept="image/*" onChange={handleImgUpload} />
-              </label>
-           </div>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-4 mb-4">
+            {editingProduct?.images?.map((img, idx) => (
+              <div key={idx} className="relative w-24 h-24 group">
+                <img src={getImgUrl(img, 200)} className="w-full h-full object-cover rounded-xl border-2 border-white shadow-sm" />
+                <button onClick={() => setEditingProduct({ ...editingProduct!, images: editingProduct.images?.filter((_, i) => i !== idx) })} className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg">×</button>
+              </div>
+            ))}
+          </div>
+          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} multiple accept="image/*" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full py-8 bg-white border-4 border-dashed border-gray-200 text-gray-400 rounded-3xl text-xl font-bold hover:bg-gray-100 transition-all uppercase tracking-widest"
+          >
+            {isUploading ? "SUBIENDO..." : '📸 SUBIR FOTOS'}
+          </button>
         </div>
 
-        <button 
-          onClick={handleSaveProduct} 
+        <button
+          onClick={handleSave}
           disabled={isSaving}
-          className="w-full py-12 matita-gradient-orange text-white rounded-[4rem] text-5xl font-black uppercase shadow-2xl hover:scale-[1.02] active:scale-95 transition-all border-b-[12px] border-orange-700 disabled:opacity-50"
+          className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-bold shadow-xl border-4 border-white hover:scale-[1.02] active:scale-95 transition-all uppercase"
         >
-           {isSaving ? 'GUARDANDO...' : '¡PUBLICAR TESORO! ✨'}
+          {isSaving ? "GUARDANDO..." : "¡GUARDAR TODO! ✨"}
         </button>
       </div>
     </div>
   );
 };
 
-// --- COMPONENTE: SOCIOS MANAGER ---
+const SalesManager: React.FC = () => {
+  const { supabase } = useApp();
+  const [sales, setSales] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      const { data } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
+      if (data) setSales(data);
+    };
+    fetchSales();
+  }, [supabase]);
+
+  return (
+    <div className="space-y-8 animate-fadeIn">
+      <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter px-4">HISTORIAL DE VENTAS 💸</h3>
+      <div className="grid gap-4">
+        {sales.map(s => (
+          <div key={s.id} className="bg-gray-50 p-6 rounded-[2rem] border-2 border-white shadow-sm flex justify-between items-center">
+            <div>
+              <p className="text-xl font-bold text-gray-800 uppercase">#{s.id.slice(0, 8)} - {s.user_name || 'Invitado'}</p>
+              <p className="text-sm text-gray-400 uppercase">{new Date(s.created_at).toLocaleString()}</p>
+            </div>
+            <p className="text-3xl font-bold text-[#f6a118]">${s.total}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const SociosManager: React.FC = () => {
   const { supabase } = useApp();
   const [socios, setSocios] = useState<User[]>([]);
-  const [editingSocio, setEditingSocio] = useState<User | null>(null);
-  const [search, setSearch] = useState('');
+  const [editingPointsId, setEditingPointsId] = useState<string | null>(null);
+  const [newPoints, setNewPoints] = useState<number>(0);
 
   const fetchSocios = async () => {
     const { data } = await supabase.from('users').select('*').order('points', { ascending: false });
@@ -540,168 +690,44 @@ const SociosManager: React.FC = () => {
 
   useEffect(() => { fetchSocios(); }, [supabase]);
 
-  const filtered = socios.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase()));
-
-  const handleUpdate = async () => {
-    if (!editingSocio) return;
-    const { error } = await supabase.from('users').update({
-      name: editingSocio.name,
-      points: editingSocio.points,
-      is_socio: editingSocio.isSocio,
-      is_admin: editingSocio.isAdmin
-    }).eq('id', editingSocio.id);
-
+  const handleUpdatePoints = async (id: string) => {
+    const { error } = await supabase.from('users').update({ points: newPoints }).eq('id', id);
     if (!error) {
-      alert("Socio actualizado con éxito ✅");
-      setEditingSocio(null);
+      alert('¡Puntos actualizados! ✨');
+      setEditingPointsId(null);
       fetchSocios();
     }
   };
 
-  const handleResetPass = async (email: string) => {
-    if (confirm(`¿Enviar instrucciones de cambio de clave a ${email}?`)) {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/login',
-      });
-      if (!error) alert("Email de recuperación enviado correctamente 📧");
-      else alert("Error: " + error.message);
-    }
-  };
-
   return (
-    <div className="space-y-12 animate-fadeIn">
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-8">
-        <h3 className="text-5xl font-black uppercase tracking-tighter">Socios del Club 👑</h3>
-        <div className="relative w-full lg:w-96">
-          <Search className="absolute left-5 top-5 text-gray-300" />
-          <input 
-            type="text" 
-            placeholder="BUSCAR SOCIO POR NOMBRE O MAIL..." 
-            className="w-full p-5 pl-14 rounded-3xl bg-gray-50 border-4 border-transparent focus:border-[#fadb31] focus:bg-white outline-none font-bold uppercase transition-all shadow-inner"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-      
-      <div className="grid gap-6">
-        {filtered.map(s => (
-          <div key={s.id} className="bg-white p-10 rounded-[4rem] border-8 border-gray-50 shadow-sm flex flex-col lg:flex-row justify-between items-center gap-8 group hover:border-[#fadb31] transition-all">
-            <div className="flex items-center gap-8">
-               <div className={`w-28 h-28 rounded-[2.5rem] flex items-center justify-center text-5xl shadow-inner ${s.isAdmin ? 'bg-orange-100' : 'bg-blue-50'}`}>
-                 {s.isAdmin ? '🛡️' : '👤'}
-               </div>
-               <div>
-                  <h4 className="text-4xl font-black uppercase text-gray-800 leading-none mb-2">{s.name}</h4>
-                  <div className="flex items-center gap-3 text-lg text-gray-400 font-bold lowercase">
-                    <Mail size={16}/> {s.email}
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    {s.isAdmin && <span className="bg-orange-500 text-white text-[10px] px-4 py-1.5 rounded-full font-black uppercase flex items-center gap-1"><ShieldCheck size={12}/> Admin</span>}
-                    {s.isSocio && <span className="bg-[#fadb31] text-white text-[10px] px-4 py-1.5 rounded-full font-black uppercase flex items-center gap-1"><Star size={12}/> Socio VIP</span>}
-                  </div>
-               </div>
+    <div className="space-y-8 animate-fadeIn">
+      <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter px-4">SOCIOS DEL CLUB 👑</h3>
+      <div className="grid gap-4">
+        {socios.map(s => (
+          <div key={s.id} className="bg-white p-6 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-[#fef9eb] rounded-full flex items-center justify-center text-2xl">
+                {s.isAdmin ? '🧙‍♂️' : s.isSocio ? '👑' : '👤'}
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-gray-800 uppercase">{s.name}</h4>
+                <p className="text-sm text-gray-400 uppercase">{s.email}</p>
+              </div>
             </div>
-
-            <div className="flex items-center gap-8">
-               <div className="text-center bg-gray-50 px-10 py-6 rounded-[3rem] shadow-inner border-4 border-white">
-                  <p className="text-5xl font-black text-[#f6a118] leading-none mb-1">{s.points.toLocaleString()}</p>
-                  <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">PUNTOS ✨</p>
-               </div>
-               <div className="flex gap-4">
-                  <button onClick={() => setEditingSocio(s)} className="w-20 h-20 bg-blue-50 text-blue-400 rounded-[2rem] flex items-center justify-center hover:bg-blue-400 hover:text-white transition-all shadow-md">
-                    <UserCog size={32}/>
-                  </button>
-                  <button onClick={() => handleResetPass(s.email)} className="w-20 h-20 bg-orange-50 text-orange-400 rounded-[2rem] flex items-center justify-center hover:bg-orange-400 hover:text-white transition-all shadow-md">
-                    <Key size={32}/>
-                  </button>
-               </div>
+            <div className="flex items-center gap-6">
+              {editingPointsId === s.id ? (
+                <div className="flex items-center gap-2">
+                  <input type="number" className="w-20 p-2 text-center border-2 rounded-xl" value={newPoints} onFocus={e => e.target.select()} onChange={e => setNewPoints(Number(e.target.value))} />
+                  <button onClick={() => handleUpdatePoints(s.id)} className="bg-green-500 text-white p-2 rounded-xl">✓</button>
+                  <button onClick={() => setEditingPointsId(null)} className="bg-gray-100 text-gray-400 p-2 rounded-xl">×</button>
+                </div>
+              ) : (
+                <div className="cursor-pointer text-right" onClick={() => { setEditingPointsId(s.id); setNewPoints(s.points); }}>
+                  <p className="text-2xl font-bold text-[#f6a118]">{s.points}</p>
+                  <p className="text-[10px] font-bold text-gray-300 uppercase">PUNTOS ✨</p>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
-      </div>
-
-      {editingSocio && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xl z-[100] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-2xl rounded-[5rem] p-16 border-[16px] border-white shadow-2xl space-y-12 animate-slideUp">
-             <div className="text-center space-y-2">
-                <h3 className="text-5xl font-black uppercase tracking-tighter">Perfil de Socio</h3>
-                <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">{editingSocio.email}</p>
-             </div>
-             
-             <div className="space-y-8">
-                <div className="space-y-3">
-                   <label className="text-sm font-black text-gray-400 ml-6 uppercase">Nombre Completo</label>
-                   <input type="text" className="w-full text-3xl p-8 rounded-[3rem] bg-gray-50 font-black uppercase outline-none focus:bg-white border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner" value={editingSocio.name} onChange={e => setEditingSocio({...editingSocio, name: e.target.value})} />
-                </div>
-                <div className="space-y-3">
-                   <label className="text-sm font-black text-gray-400 ml-6 uppercase">Billetera de Puntos</label>
-                   <div className="flex items-center gap-6">
-                      <input type="number" className="flex-grow text-4xl p-8 rounded-[3rem] bg-gray-50 font-black outline-none focus:bg-white border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner" value={editingSocio.points} onChange={e => setEditingSocio({...editingSocio, points: parseInt(e.target.value) || 0})} />
-                      <div className="w-24 h-24 bg-[#fef9eb] rounded-full flex items-center justify-center text-4xl shadow-md border-4 border-white">✨</div>
-                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-6">
-                   <button 
-                    onClick={() => setEditingSocio({...editingSocio, isSocio: !editingSocio.isSocio})}
-                    className={`py-8 rounded-[3rem] text-2xl font-black uppercase transition-all shadow-lg flex items-center justify-center gap-3 border-b-8 ${editingSocio.isSocio ? 'bg-[#fadb31] text-white border-yellow-600' : 'bg-gray-100 text-gray-300 border-gray-200'}`}
-                   >
-                     {editingSocio.isSocio ? <CheckCircle2/> : <XCircle/>} {editingSocio.isSocio ? 'SOCIO VIP' : 'NO SOCIO'}
-                   </button>
-                   <button 
-                    onClick={() => setEditingSocio({...editingSocio, isAdmin: !editingSocio.isAdmin})}
-                    className={`py-8 rounded-[3rem] text-2xl font-black uppercase transition-all shadow-lg flex items-center justify-center gap-3 border-b-8 ${editingSocio.isAdmin ? 'bg-orange-500 text-white border-orange-700' : 'bg-gray-100 text-gray-300 border-gray-200'}`}
-                   >
-                     {editingSocio.isAdmin ? <ShieldCheck/> : <User/>} {editingSocio.isAdmin ? 'ADMINISTRADOR' : 'USUARIO'}
-                   </button>
-                </div>
-             </div>
-
-             <div className="flex gap-6">
-                <button onClick={() => setEditingSocio(null)} className="flex-1 py-8 bg-gray-50 text-gray-300 rounded-[3rem] font-black uppercase text-xl hover:bg-gray-100 transition-all">Cancelar</button>
-                <button onClick={handleUpdate} className="flex-1 py-8 matita-gradient-orange text-white rounded-[3rem] font-black uppercase text-2xl shadow-xl border-b-8 border-orange-700">Guardar ✨</button>
-             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// --- OTROS COMPONENTES ---
-
-const SalesManager: React.FC = () => {
-  const { supabase } = useApp();
-  const [sales, setSales] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
-      if (data) setSales(data);
-    };
-    fetch();
-  }, [supabase]);
-
-  return (
-    <div className="space-y-12 animate-fadeIn">
-      <h3 className="text-5xl font-black uppercase tracking-tighter">Historial de Ventas 💸</h3>
-      <div className="grid gap-6">
-        {sales.map(s => (
-          <div key={s.id} className="bg-gray-50 p-10 rounded-[4rem] border-4 border-white shadow-sm flex flex-col lg:flex-row justify-between items-center group hover:bg-white transition-all">
-             <div className="flex items-center gap-8">
-                <div className="w-24 h-24 bg-white rounded-[2.5rem] flex items-center justify-center text-4xl shadow-inner group-hover:bg-[#fef9eb]">🛍️</div>
-                <div>
-                   <p className="text-3xl font-black uppercase text-gray-800 leading-none mb-1">#{s.id.slice(0, 8)} - {s.user_name || 'Invitado'}</p>
-                   <p className="text-lg text-gray-300 font-bold uppercase tracking-widest flex items-center gap-2">
-                     <Settings size={14}/> {new Date(s.created_at).toLocaleString('es-AR')}
-                   </p>
-                </div>
-             </div>
-             <div className="text-right">
-                <p className="text-6xl font-black text-[#f6a118] leading-none mb-2">${s.total.toLocaleString()}</p>
-                <span className="bg-green-100 text-green-500 px-4 py-1.5 rounded-full font-black text-[10px] uppercase">PAGADO ✅</span>
-             </div>
           </div>
         ))}
       </div>
@@ -713,26 +739,23 @@ const IdeasManager: React.FC = () => {
   const { supabase } = useApp();
   const [ideas, setIdeas] = useState<any[]>([]);
   useEffect(() => {
-    const fetch = async () => {
+    const f = async () => {
       const { data } = await supabase.from('ideas').select('*').order('created_at', { ascending: false });
       if (data) setIdeas(data);
     };
-    fetch();
+    f();
   }, [supabase]);
 
   return (
-    <div className="space-y-12 animate-fadeIn px-4">
-      <h3 className="text-5xl font-black uppercase tracking-tighter">Buzón de Ideas 💡</h3>
-      <div className="grid gap-10">
+    <div className="space-y-8 animate-fadeIn px-4">
+      <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">BUZÓN DE IDEAS 💡</h3>
+      <div className="grid gap-6">
         {ideas.map(i => (
-          <div key={i.id} className="bg-[#fef9eb] p-12 rounded-[5rem] border-[12px] border-white shadow-xl relative overflow-hidden group">
-            <div className="absolute top-10 right-10 text-[10rem] opacity-5 group-hover:rotate-12 group-hover:scale-110 transition-transform text-[#fadb31]">💡</div>
-            <p className="text-4xl font-black text-gray-800 mb-8 italic uppercase leading-none">"{i.title}"</p>
-            <p className="text-2xl text-gray-500 font-bold leading-relaxed uppercase mb-8">{i.content}</p>
-            <div className="flex items-center gap-3 bg-white w-fit px-8 py-4 rounded-full shadow-md">
-              <div className="w-8 h-8 bg-[#f6a118] rounded-full"></div>
-              <p className="text-lg text-[#f6a118] font-black uppercase tracking-widest">- {i.user_name || 'Anónimo'}</p>
-            </div>
+          <div key={i.id} className="bg-[#fef9eb] p-8 rounded-[3rem] border-4 border-white shadow-md relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-4 text-4xl opacity-10 group-hover:opacity-30 transition-opacity">💡</div>
+            <p className="text-2xl font-bold text-gray-800 mb-2 italic uppercase">"{i.title}"</p>
+            <p className="text-lg text-gray-500 uppercase">{i.content}</p>
+            <p className="mt-4 text-sm text-[#f6a118] font-bold uppercase tracking-widest">- {i.user_name}</p>
           </div>
         ))}
       </div>
@@ -744,48 +767,49 @@ const DesignManager: React.FC = () => {
   const { logoUrl, setLogoUrl, supabase } = useApp();
   const fRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [preview, setPreview] = useState<File | null>(null);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    let finalId = logoUrl;
-    if (preview) {
-      const formData = new FormData();
-      formData.append("file", preview);
-      formData.append("upload_preset", "Matita_web");
-      const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", { method: "POST", body: formData });
+  const uploadLogoToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "Matita_web");
+    try {
+      const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", {
+        method: "POST",
+        body: formData,
+      });
       const data = await res.json();
-      finalId = data.public_id;
+      return data.public_id;
+    } catch (error) {
+      return null;
     }
-    await supabase.from('site_config').upsert({ id: 'global', logo_url: finalId });
-    setLogoUrl(finalId);
-    setPreview(null);
+  };
+
+  const saveDesign = async () => {
+    setIsSaving(true);
+    let finalLogoId = logoUrl;
+    if (previewFile) {
+      const uploadedId = await uploadLogoToCloudinary(previewFile);
+      if (uploadedId) finalLogoId = uploadedId;
+    }
+    await supabase.from('site_config').upsert({ id: 'global', logo_url: finalLogoId });
+    setLogoUrl(finalLogoId);
+    setPreviewFile(null);
     setIsSaving(false);
-    alert("🎨 Identidad visual actualizada.");
+    alert('✨ LOGO GUARDADO');
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-16 text-center py-10">
-      <h3 className="text-6xl font-black text-[#f6a118] uppercase tracking-tighter">Marca & Estilo 🎨</h3>
-      <div className="bg-[#fef9eb] p-24 rounded-[6rem] shadow-2xl border-[20px] border-white relative">
-        <div 
-          className="w-80 h-80 bg-white rounded-full mx-auto shadow-2xl flex items-center justify-center p-14 border-[12px] border-[#fadb31] cursor-pointer group hover:scale-110 transition-all relative" 
-          onClick={() => fRef.current?.click()}
-        >
-          <img src={preview ? URL.createObjectURL(preview) : getImgUrl(logoUrl, 600)} className="w-full h-full object-contain group-hover:rotate-6 transition-transform" alt="Logo" />
-          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-full text-5xl">📸</div>
+    <div className="max-w-2xl mx-auto space-y-12 text-center py-6">
+      <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter">IDENTIDAD DE MARCA 🎨</h3>
+      <div className="bg-[#fef9eb] p-12 rounded-[4rem] shadow-xl border-4 border-white">
+        <div className="w-48 h-48 bg-white rounded-full mx-auto shadow-inner flex items-center justify-center p-6 border-4 border-[#fadb31] cursor-pointer group" onClick={() => fRef.current?.click()}>
+          <img src={previewFile ? URL.createObjectURL(previewFile) : getImgUrl(logoUrl, 300)} className="w-full h-full object-contain group-hover:scale-110 transition-transform" alt="Logo" />
         </div>
-        <div className="mt-12 space-y-4">
-           <p className="text-gray-400 font-black uppercase tracking-[0.3em] text-sm">Cambiar Logotipo Oficial</p>
-           <p className="text-gray-300 text-xs uppercase px-10">Asegurate de usar una imagen PNG transparente para que brille ✨</p>
-        </div>
-        <input type="file" ref={fRef} className="hidden" accept="image/*" onChange={e => setPreview(e.target.files?.[0] || null)} />
-        <button 
-          onClick={handleSave} 
-          disabled={isSaving} 
-          className="w-full mt-16 py-10 matita-gradient-orange text-white rounded-[3.5rem] text-4xl font-black shadow-2xl uppercase border-b-[12px] border-orange-700 hover:scale-105 active:scale-95 transition-all"
-        >
-          {isSaving ? "Guardando..." : "Sincronizar Marca ✨"}
+        <p className="mt-4 text-gray-400 font-bold uppercase text-xs">Click para cambiar el logotipo oficial</p>
+        <input type="file" ref={fRef} className="hidden" onChange={e => setPreviewFile(e.target.files?.[0] || null)} accept="image/*" />
+        <button onClick={saveDesign} disabled={isSaving} className="w-full mt-10 py-5 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-lg uppercase">
+          {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
         </button>
       </div>
     </div>
@@ -799,56 +823,62 @@ const CarouselManager: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchCarousel = async () => {
       const { data } = await supabase.from('site_config').select('carousel_images').eq('id', 'global').maybeSingle();
       if (data?.carousel_images) setImages(data.carousel_images);
     };
-    fetch();
+    fetchCarousel();
   }, [supabase]);
+
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "Matita_web");
+    formData.append("folder", "matita2026/carousel");
+    const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    return data.public_id;
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    const newImgs: string[] = [];
+    const newImages: string[] = [];
     for (let i = 0; i < e.target.files.length; i++) {
-      const formData = new FormData();
-      formData.append("file", e.target.files[i]);
-      formData.append("upload_preset", "Matita_web");
-      const res = await fetch("https://api.cloudinary.com/v1_1/dllm8ggob/image/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.public_id) newImgs.push(data.public_id);
+      const id = await uploadToCloudinary(e.target.files[i]);
+      if (id) newImages.push(id);
     }
-    setImages(prev => [...prev, ...newImgs]);
+    setImages(prev => [...prev, ...newImages]);
   };
 
-  const save = async () => {
+  const removeImage = (index: number) => setImages(prev => prev.filter((_, i) => i !== index));
+
+  const saveCarousel = async () => {
     setIsSaving(true);
     await supabase.from('site_config').upsert({ id: 'global', carousel_images: images });
     setIsSaving(false);
-    alert("🖼️ Banner principal actualizado.");
+    alert("✨ Carrusel actualizado");
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
-      <h3 className="text-5xl font-black text-[#f6a118] uppercase tracking-tighter text-center">Escaparate de Portada 🖼️</h3>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
+    <div className="max-w-5xl mx-auto space-y-10">
+      <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter text-center">ADMINISTRAR CARRUSEL 🖼️</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {images.map((img, i) => (
-          <div key={i} className="relative group rounded-[4rem] overflow-hidden border-[10px] border-white shadow-2xl aspect-[4/5] bg-gray-50">
-            <img src={getImgUrl(img, 800)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-              <button onClick={() => setImages(images.filter((_, idx) => idx !== i))} className="bg-red-500 text-white p-6 rounded-full shadow-2xl hover:scale-125 active:scale-95 transition-all">
-                <Trash2 size={32}/>
-              </button>
+          <div key={i} className="relative group overflow-hidden rounded-[2rem] border-4 border-white shadow-md">
+            <img src={getImgUrl(img, 600)} className="w-full h-full object-cover aspect-square group-hover:scale-110 transition-transform duration-700" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2">
+              <button onClick={() => removeImage(i)} className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">ELIMINAR ✕</button>
             </div>
           </div>
         ))}
-        <button onClick={() => fileRef.current?.click()} className="aspect-[4/5] flex flex-col items-center justify-center bg-[#fef9eb] rounded-[4rem] border-[10px] border-dashed border-white hover:bg-white hover:border-[#fadb31] transition-all group shadow-xl">
-          <Plus size={80} className="text-gray-200 group-hover:text-[#fadb31] group-hover:scale-125 transition-all" />
-          <span className="mt-4 font-black text-gray-300 uppercase tracking-widest text-xs">Subir Foto</span>
+        <button onClick={() => fileRef.current?.click()} className="aspect-square flex flex-col items-center justify-center bg-gray-50 border-4 border-dashed border-gray-200 rounded-[2rem] hover:bg-gray-100 transition-all group">
+            <span className="text-4xl group-hover:scale-125 transition-transform">📸</span>
+            <span className="text-xs font-bold text-gray-400 uppercase mt-2">Añadir</span>
         </button>
       </div>
       <input type="file" ref={fileRef} className="hidden" multiple accept="image/*" onChange={handleUpload} />
-      <button onClick={save} disabled={isSaving} className="w-full py-12 matita-gradient-orange text-white rounded-[4rem] text-5xl font-black shadow-2xl uppercase border-b-[12px] border-orange-700 hover:scale-[1.02] active:scale-95 transition-all">
-         {isSaving ? "Guardando Portada..." : "¡Publicar Banner! ✨"}
+      <button onClick={saveCarousel} disabled={isSaving} className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-xl uppercase mt-8">
+        {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
       </button>
     </div>
   );
