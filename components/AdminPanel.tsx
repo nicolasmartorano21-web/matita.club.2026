@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Product, User } from '../types';
 import { useApp } from '../App';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
+import * as XLSX from 'xlsx';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configuración del Worker de PDF.js para procesar archivos locales
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 /**
  * UTILERÍA DE IMÁGENES OPTIMIZADA
@@ -305,44 +310,94 @@ const InventoryManager: React.FC = () => {
     setFormMode('edit');
   };
 
-  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /**
+   * MANEJADOR MULTI-ARCHIVO (CSV, EXCEL, PDF)
+   */
+  const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const rows = text.split("\n").slice(1);
-      const newItems = rows.map(row => {
-        const parts = row.split(",");
-        if (parts.length < 2) return null;
-        return { 
-          name: parts[0].trim(), 
-          price: Number(parts[1]) || 0, 
-          category: parts[2]?.trim() || "Escolar", 
-          colors: [{ color: 'Único', stock: 10 }], 
-          images: [] 
-        };
-      }).filter(i => i !== null);
-      if (confirm(`¿Cargar ${newItems.length} productos?`)) {
-        await supabase.from('products').insert(newItems);
-        fetchProducts(true);
+
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    let newItems: any[] = [];
+
+    try {
+      if (fileExt === 'csv') {
+        const text = await file.text();
+        const rows = text.split("\n").slice(1);
+        newItems = rows.map(row => {
+          const parts = row.split(",");
+          if (parts.length < 2) return null;
+          return { 
+            name: parts[0].trim(), 
+            price: Number(parts[1]) || 0, 
+            category: parts[2]?.trim() || "Escolar", 
+            colors: [{ color: 'Único', stock: 10 }], 
+            images: [] 
+          };
+        }).filter(i => i !== null);
+      } 
+      else if (fileExt === 'xlsx' || fileExt === 'xls') {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        newItems = json.map(row => ({
+          name: row.Nombre || row.name || Object.values(row)[0],
+          price: Number(row.Precio || row.price || Object.values(row)[1]) || 0,
+          category: row.Categoria || row.category || "Escolar",
+          colors: [{ color: 'Único', stock: 10 }],
+          images: []
+        }));
       }
-    };
-    reader.readAsText(file);
+      else if (fileExt === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map((item: any) => item.str).join(" ") + "\n";
+        }
+
+        // Parseo simple de PDF: busca lineas que parezcan "Producto - Precio"
+        const lines = fullText.split("\n");
+        newItems = lines.map(line => {
+          const parts = line.split(/[-|$]/);
+          if (parts.length >= 2) {
+            return {
+              name: parts[0].trim(),
+              price: parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0,
+              category: "Escolar",
+              colors: [{ color: 'Único', stock: 10 }],
+              images: []
+            };
+          }
+          return null;
+        }).filter(i => i !== null && i.name.length > 2);
+      }
+
+      if (newItems.length > 0) {
+        if (confirm(`¿Detectamos ${newItems.length} productos. ¿Deseas cargarlos al inventario?`)) {
+          const { error } = await supabase.from('products').insert(newItems);
+          if (error) throw error;
+          alert('🚀 ¡Importación completada con éxito!');
+          fetchProducts(true);
+        }
+      } else {
+        alert('No se encontraron productos válidos en el archivo. 🧐');
+      }
+    } catch (err: any) {
+      alert("Error procesando archivo: " + err.message);
+    }
   };
 
-  /**
-   * ARREGLO PARA PODER BORRAR EL 0
-   */
   const handleStockChange = (idx: number, value: string) => {
     if (!editingProduct?.colors) return;
     const next = [...editingProduct.colors];
-    
-    // Si el valor es una cadena vacía, lo dejamos como cadena vacía en el estado
-    // para que el input se vea vacío y el usuario pueda escribir.
-    // Al guardar, la función Number() lo convertirá en 0.
     const finalValue = value === "" ? ("" as any) : parseInt(value, 10);
-    
     next[idx].stock = finalValue;
     setEditingProduct({ ...editingProduct, colors: next });
   };
@@ -360,7 +415,6 @@ const InventoryManager: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // Al guardar nos aseguramos que todos los stock sean números
       const cleanColors = editingProduct.colors?.map(c => ({
         ...c,
         stock: Number(c.stock) || 0
@@ -441,8 +495,8 @@ const InventoryManager: React.FC = () => {
           <div className="flex flex-col gap-2 w-full md:w-auto">
             <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">INVENTARIO 📦</h3>
             <div className="flex gap-4">
-              <input type="file" ref={csvImportRef} className="hidden" accept=".csv" onChange={handleCSVImport} />
-              <button onClick={() => csvImportRef.current?.click()} className="text-[#ea7e9c] font-bold text-xs underline uppercase">Cargar CSV ⬆️</button>
+              <input type="file" ref={csvImportRef} className="hidden" accept=".csv, .xlsx, .xls, .pdf" onChange={handleBulkImport} />
+              <button onClick={() => csvImportRef.current?.click()} className="text-[#ea7e9c] font-bold text-xs underline uppercase">Importar (EXCEL/PDF/CSV) ⬆️</button>
             </div>
           </div>
 
@@ -567,7 +621,7 @@ const InventoryManager: React.FC = () => {
                     type="number"
                     className="w-16 bg-transparent text-center text-2xl font-bold outline-none border-b-2 border-[#fadb31]"
                     value={c.stock}
-                    onFocus={e => e.target.select()} // Al tocar, selecciona todo para borrar fácil
+                    onFocus={e => e.target.select()}
                     onChange={(e) => handleStockChange(i, e.target.value)}
                   />
                   <button onClick={() => updateStockByDelta(i, 1)} className="text-3xl text-[#f6a118] font-bold active:scale-125 transition-transform">+</button>
