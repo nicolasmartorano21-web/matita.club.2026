@@ -2,7 +2,17 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product, User } from '../types';
 import { useApp } from '../App';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, BarChart, Bar, Cell, AreaChart, Area 
+} from 'recharts';
+
+// LIBRERÍAS PARA IMPORTACIÓN (Asegurate de tener el package.json que arreglamos antes)
+import * as XLSX from 'xlsx';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configuración de soporte para PDF
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 /**
  * UTILERÍA DE IMÁGENES OPTIMIZADA
@@ -37,7 +47,7 @@ const AdminPanel: React.FC = () => {
             <input
               type="password"
               placeholder="CLAVE MATITA"
-              className="w-full text-3xl text-center shadow-inner py-5 bg-[#fef9eb] rounded-3xl outline-none uppercase"
+              className="w-full text-3xl text-center shadow-inner py-5 bg-[#fef9eb] rounded-3xl outline-none uppercase font-bold"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -45,10 +55,7 @@ const AdminPanel: React.FC = () => {
               Entrar
             </button>
           </form>
-          <button
-            onClick={() => navigate('/')}
-            className="text-gray-400 font-bold uppercase underline text-sm mt-4"
-          >
+          <button onClick={() => navigate('/')} className="text-gray-400 font-bold uppercase underline text-sm mt-4">
             Volver a la Tienda
           </button>
         </div>
@@ -85,10 +92,7 @@ const AdminPanel: React.FC = () => {
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setIsAuthenticated(false)}
-            className="px-8 py-3 bg-[#ea7e9c] text-white rounded-2xl font-bold text-lg shadow-xl hover:scale-110 transition-all uppercase flex items-center gap-2 border-4 border-white"
-          >
+          <button onClick={() => setIsAuthenticated(false)} className="px-8 py-3 bg-[#ea7e9c] text-white rounded-2xl font-bold text-lg shadow-xl hover:scale-110 transition-all uppercase flex items-center gap-2 border-4 border-white">
             SALIR DEL PANEL 🚪
           </button>
         </div>
@@ -245,6 +249,7 @@ const InventoryManager: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkImportRef = useRef<HTMLInputElement>(null);
 
   const fetchProducts = useCallback(async (isNewSearch = false) => {
     if (isLoading) return;
@@ -256,10 +261,7 @@ const InventoryManager: React.FC = () => {
       const to = from + PAGE_SIZE - 1;
 
       let query = supabase.from('products').select('*', { count: 'exact' });
-
-      if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
-      }
+      if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
 
       const { data, error, count } = await query
         .order('created_at', { ascending: false })
@@ -302,32 +304,93 @@ const InventoryManager: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, formMode]);
 
-  const exportInventory = () => {
-    const headers = "Nombre,Precio,Puntos,Categoría\n";
-    const csvContent = products.map(p => `"${p.name}",${p.price},${p.points},"${p.category}"`).join("\n");
-    const blob = new Blob([headers + csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Inventario_MATITA.csv';
-    a.click();
+  const handleClone = (p: Product) => {
+    const clone = { 
+      ...p, 
+      id: undefined, 
+      name: `${p.name} (COPIA)`, 
+      created_at: undefined 
+    };
+    setEditingProduct(clone);
+    setFormMode('edit');
   };
 
-  // Función para manejar el stock mediante botones
-  const updateStockByDelta = (idx: number, change: number) => {
-    if (!editingProduct?.colors) return;
-    const next = [...editingProduct.colors];
-    const currentStock = Number(next[idx].stock) || 0;
-    next[idx].stock = Math.max(0, currentStock + change);
-    setEditingProduct({ ...editingProduct, colors: next });
+  /**
+   * MANEJADOR MASIVO: CSV, EXCEL, PDF
+   */
+  const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    let newItems: any[] = [];
+
+    try {
+      if (ext === 'csv') {
+        const text = await file.text();
+        const rows = text.split("\n").slice(1);
+        newItems = rows.map(row => {
+          const parts = row.split(",");
+          if (parts.length < 2) return null;
+          return { name: parts[0].trim(), price: Number(parts[1]) || 0, category: parts[2]?.trim() || "Escolar", colors: [{ color: 'Único', stock: 10 }], images: [] };
+        }).filter(i => i !== null);
+      } 
+      else if (ext === 'xlsx' || ext === 'xls') {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+        newItems = json.map(r => ({
+          name: r.Nombre || r.name || Object.values(r)[0],
+          price: Number(r.Precio || r.price || Object.values(r)[1]) || 0,
+          category: r.Categoria || r.category || "Escolar",
+          colors: [{ color: 'Único', stock: 10 }],
+          images: []
+        }));
+      } 
+      else if (ext === 'pdf') {
+        const data = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map((it: any) => it.str).join(" ") + "\n";
+        }
+        // Lógica simple: cada línea con un "-" o un "$" se asume producto
+        const lines = text.split("\n");
+        newItems = lines.map(line => {
+          const parts = line.split(/[-|$]/);
+          if (parts.length >= 2) {
+            return { name: parts[0].trim(), price: parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0, category: "Escolar", colors: [{ color: 'Único', stock: 10 }], images: [] };
+          }
+          return null;
+        }).filter(i => i !== null && i.name.length > 3);
+      }
+
+      if (newItems.length > 0) {
+        if (confirm(`¿Cargar ${newItems.length} productos detectados?`)) {
+          await supabase.from('products').insert(newItems);
+          fetchProducts(true);
+        }
+      }
+    } catch (err) {
+      alert("Error al procesar el archivo");
+    }
   };
 
-  // Función para manejar el stock mediante escritura directa
   const handleStockChange = (idx: number, value: string) => {
     if (!editingProduct?.colors) return;
     const next = [...editingProduct.colors];
-    // Permitimos que el valor sea string vacío mientras el usuario borra
-    next[idx].stock = value === "" ? 0 : parseInt(value, 10);
+    const finalValue = value === "" ? ("" as any) : parseInt(value, 10);
+    next[idx].stock = finalValue;
+    setEditingProduct({ ...editingProduct, colors: next });
+  };
+
+  const updateStockByDelta = (idx: number, delta: number) => {
+    if (!editingProduct?.colors) return;
+    const next = [...editingProduct.colors];
+    const current = Number(next[idx].stock) || 0;
+    next[idx].stock = Math.max(0, current + delta);
     setEditingProduct({ ...editingProduct, colors: next });
   };
 
@@ -336,6 +399,11 @@ const InventoryManager: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const cleanColors = editingProduct.colors?.map(c => ({
+        ...c,
+        stock: Number(c.stock) || 0
+      })) || [{ color: 'Único', stock: 1 }];
+
       const payload = {
         name: editingProduct.name,
         description: editingProduct.description || "",
@@ -344,7 +412,7 @@ const InventoryManager: React.FC = () => {
         points: Number(editingProduct.points) || 0,
         category: editingProduct.category || "Escolar",
         images: editingProduct.images || [],
-        colors: editingProduct.colors || [{ color: 'Único', stock: 1 }]
+        colors: cleanColors
       };
 
       const { error } = editingProduct.id
@@ -410,7 +478,10 @@ const InventoryManager: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex flex-col gap-2 w-full md:w-auto">
             <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">INVENTARIO 📦</h3>
-            <button onClick={exportInventory} className="text-[#f6a118] font-bold text-sm underline uppercase text-left">EXPORTAR CSV ⬇️</button>
+            <div className="flex gap-4">
+              <input type="file" ref={bulkImportRef} className="hidden" accept=".csv, .xlsx, .xls, .pdf" onChange={handleBulkImport} />
+              <button onClick={() => bulkImportRef.current?.click()} className="text-[#ea7e9c] font-bold text-xs underline uppercase">Importar (Excel/PDF/CSV) ⬆️</button>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full md:max-w-xl">
@@ -435,7 +506,8 @@ const InventoryManager: React.FC = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {products.map(p => (
-            <div key={p.id} className="bg-gray-50 p-4 rounded-[2rem] border-2 border-white shadow-sm hover:border-[#fadb31] transition-all flex flex-col h-full group">
+            <div key={p.id} className="bg-gray-50 p-4 rounded-[2rem] border-2 border-white shadow-sm hover:border-[#fadb31] transition-all flex flex-col h-full group relative">
+              <button onClick={() => handleClone(p)} className="absolute top-6 right-6 z-10 bg-white/90 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all hover:bg-[#fadb31]">📑</button>
               <div className="relative overflow-hidden rounded-2xl mb-3 aspect-square">
                 <img
                   src={getImgUrl(p.images[0], 200)}
@@ -482,11 +554,11 @@ const InventoryManager: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-1">
             <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Nombre del Tesoro</label>
-            <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.name || ''} onChange={e => setEditingProduct({ ...editingProduct!, name: e.target.value })} />
+            <input type="text" className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase font-bold" value={editingProduct?.name || ''} onChange={e => setEditingProduct({ ...editingProduct!, name: e.target.value })} />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-bold text-gray-400 ml-4 uppercase tracking-widest">Categoría</label>
-            <select className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase" value={editingProduct?.category} onChange={e => setEditingProduct({ ...editingProduct!, category: e.target.value as any })}>
+            <select className="w-full text-2xl p-4 rounded-2xl outline-none shadow-inner uppercase font-bold" value={editingProduct?.category} onChange={e => setEditingProduct({ ...editingProduct!, category: e.target.value as any })}>
               {['Escolar', 'Otros', 'Oficina', 'Tecnología', 'Novedades', 'Ofertas'].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -504,22 +576,22 @@ const InventoryManager: React.FC = () => {
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Precio ($)</label>
-            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner" value={editingProduct?.price || ''} onChange={e => setEditingProduct({ ...editingProduct!, price: Number(e.target.value) })} />
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner font-bold" value={editingProduct?.price || ''} onFocus={e => e.target.select()} onChange={e => setEditingProduct({ ...editingProduct!, price: Number(e.target.value) })} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Antes ($)</label>
-            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner" value={editingProduct?.oldPrice || ''} onChange={e => setEditingProduct({ ...editingProduct!, oldPrice: Number(e.target.value) })} />
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner font-bold" value={editingProduct?.oldPrice || ''} onFocus={e => e.target.select()} onChange={e => setEditingProduct({ ...editingProduct!, oldPrice: Number(e.target.value) })} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 ml-2 uppercase tracking-widest">Puntos ✨</label>
-            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner" value={editingProduct?.points || ''} onChange={e => setEditingProduct({ ...editingProduct!, points: Number(e.target.value) })} />
+            <input type="number" className="w-full text-xl p-4 rounded-2xl outline-none shadow-inner font-bold" value={editingProduct?.points || ''} onFocus={e => e.target.select()} onChange={e => setEditingProduct({ ...editingProduct!, points: Number(e.target.value) })} />
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="flex justify-between items-center px-4">
             <h4 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Variantes y Stock</h4>
-            <button onClick={() => setEditingProduct({ ...editingProduct!, colors: [...(editingProduct?.colors || []), { color: 'Nuevo', stock: 1 }] })} className="text-[#f6a118] font-bold uppercase tracking-widest">+ AÑADIR</button>
+            <button onClick={() => setEditingProduct({ ...editingProduct!, colors: [...(editingProduct?.colors || []), { color: 'Nuevo', stock: 10 }] })} className="text-[#f6a118] font-bold uppercase tracking-widest">+ AÑADIR</button>
           </div>
           <div className="grid gap-3">
             {editingProduct?.colors?.map((c, i) => (
@@ -533,6 +605,7 @@ const InventoryManager: React.FC = () => {
                     type="number"
                     className="w-16 bg-transparent text-center text-2xl font-bold outline-none border-b-2 border-[#fadb31]"
                     value={c.stock}
+                    onFocus={e => e.target.select()}
                     onChange={(e) => handleStockChange(i, e.target.value)}
                   />
                   <button onClick={() => updateStockByDelta(i, 1)} className="text-3xl text-[#f6a118] font-bold active:scale-125 transition-transform">+</button>
@@ -567,7 +640,7 @@ const InventoryManager: React.FC = () => {
           disabled={isSaving}
           className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-bold shadow-xl border-4 border-white hover:scale-[1.02] active:scale-95 transition-all uppercase"
         >
-          {isSaving ? "GUARDANDO..." : "¡GUARDAR PRODUCTO! ✨"}
+          {isSaving ? "GUARDANDO..." : "¡GUARDAR TODO! ✨"}
         </button>
       </div>
     </div>
@@ -634,7 +707,7 @@ const SociosManager: React.FC = () => {
           <div key={s.id} className="bg-white p-6 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-[#fef9eb] rounded-full flex items-center justify-center text-2xl">
-                {s.isSocio ? '👑' : '👤'}
+                {s.isAdmin ? '🧙‍♂️' : s.isSocio ? '👑' : '👤'}
               </div>
               <div>
                 <h4 className="text-xl font-bold text-gray-800 uppercase">{s.name}</h4>
@@ -644,7 +717,7 @@ const SociosManager: React.FC = () => {
             <div className="flex items-center gap-6">
               {editingPointsId === s.id ? (
                 <div className="flex items-center gap-2">
-                  <input type="number" className="w-20 p-2 text-center border-2 rounded-xl" value={newPoints} onChange={e => setNewPoints(Number(e.target.value))} />
+                  <input type="number" className="w-20 p-2 text-center border-2 rounded-xl" value={newPoints} onFocus={e => e.target.select()} onChange={e => setNewPoints(Number(e.target.value))} />
                   <button onClick={() => handleUpdatePoints(s.id)} className="bg-green-500 text-white p-2 rounded-xl">✓</button>
                   <button onClick={() => setEditingPointsId(null)} className="bg-gray-100 text-gray-400 p-2 rounded-xl">×</button>
                 </div>
@@ -674,14 +747,15 @@ const IdeasManager: React.FC = () => {
   }, [supabase]);
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn px-4">
       <h3 className="text-3xl font-bold text-gray-700 uppercase tracking-tighter">BUZÓN DE IDEAS 💡</h3>
       <div className="grid gap-6">
         {ideas.map(i => (
-          <div key={i.id} className="bg-[#fef9eb] p-8 rounded-[3rem] border-4 border-white shadow-md">
+          <div key={i.id} className="bg-[#fef9eb] p-8 rounded-[3rem] border-4 border-white shadow-md relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-4 text-4xl opacity-10 group-hover:opacity-30 transition-opacity">💡</div>
             <p className="text-2xl font-bold text-gray-800 mb-2 italic uppercase">"{i.title}"</p>
-            <p className="text-lg text-gray-500">{i.content}</p>
-            <p className="mt-4 text-sm text-[#f6a118] font-bold uppercase">- {i.user_name}</p>
+            <p className="text-lg text-gray-500 uppercase">{i.content}</p>
+            <p className="mt-4 text-sm text-[#f6a118] font-bold uppercase tracking-widest">- {i.user_name}</p>
           </div>
         ))}
       </div>
@@ -729,9 +803,10 @@ const DesignManager: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-12 text-center py-6">
       <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter">IDENTIDAD DE MARCA 🎨</h3>
       <div className="bg-[#fef9eb] p-12 rounded-[4rem] shadow-xl border-4 border-white">
-        <div className="w-48 h-48 bg-white rounded-full mx-auto shadow-inner flex items-center justify-center p-6 border-4 border-[#fadb31] cursor-pointer" onClick={() => fRef.current?.click()}>
-          <img src={previewFile ? URL.createObjectURL(previewFile) : getImgUrl(logoUrl, 300)} className="w-full h-full object-contain" alt="Logo" />
+        <div className="w-48 h-48 bg-white rounded-full mx-auto shadow-inner flex items-center justify-center p-6 border-4 border-[#fadb31] cursor-pointer group" onClick={() => fRef.current?.click()}>
+          <img src={previewFile ? URL.createObjectURL(previewFile) : getImgUrl(logoUrl, 300)} className="w-full h-full object-contain group-hover:scale-110 transition-transform" alt="Logo" />
         </div>
+        <p className="mt-4 text-gray-400 font-bold uppercase text-xs">Click para cambiar el logotipo oficial</p>
         <input type="file" ref={fRef} className="hidden" onChange={e => setPreviewFile(e.target.files?.[0] || null)} accept="image/*" />
         <button onClick={saveDesign} disabled={isSaving} className="w-full mt-10 py-5 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-lg uppercase">
           {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
@@ -789,15 +864,20 @@ const CarouselManager: React.FC = () => {
       <h3 className="text-4xl font-bold text-[#f6a118] uppercase tracking-tighter text-center">ADMINISTRAR CARRUSEL 🖼️</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {images.map((img, i) => (
-          <div key={i} className="relative group">
-            <img src={`https://res.cloudinary.com/dllm8ggob/image/upload/w_600/${img}`} className="rounded-2xl object-cover aspect-square border-4 border-white shadow-md" />
-            <button onClick={() => removeImage(i)} className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full">✕</button>
+          <div key={i} className="relative group overflow-hidden rounded-[2rem] border-4 border-white shadow-md">
+            <img src={getImgUrl(img, 600)} className="w-full h-full object-cover aspect-square group-hover:scale-110 transition-transform duration-700" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2">
+              <button onClick={() => removeImage(i)} className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">ELIMINAR ✕</button>
+            </div>
           </div>
         ))}
+        <button onClick={() => fileRef.current?.click()} className="aspect-square flex flex-col items-center justify-center bg-gray-50 border-4 border-dashed border-gray-200 rounded-[2rem] hover:bg-gray-100 transition-all group">
+            <span className="text-4xl group-hover:scale-125 transition-transform">📸</span>
+            <span className="text-xs font-bold text-gray-400 uppercase mt-2">Añadir</span>
+        </button>
       </div>
       <input type="file" ref={fileRef} className="hidden" multiple accept="image/*" onChange={handleUpload} />
-      <button onClick={() => fileRef.current?.click()} className="w-full py-6 border-4 border-dashed border-gray-300 rounded-3xl font-bold uppercase text-gray-400">📸 AGREGAR IMÁGENES</button>
-      <button onClick={saveCarousel} disabled={isSaving} className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-xl uppercase">
+      <button onClick={saveCarousel} disabled={isSaving} className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-2xl font-bold shadow-xl uppercase mt-8">
         {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS ✨"}
       </button>
     </div>
