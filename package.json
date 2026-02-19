@@ -1,7 +1,7 @@
 {
-  "name": "matita-club-terminado",
+  "name": "matita---librería-&-club-full-terminado",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,6 @@
     "react-router-dom": "^7.13.0",
     "@supabase/supabase-js": "2.39.7",
     "recharts": "^2.12.0",
-    "lucide-react": "^0.475.0",
     "xlsx": "^0.18.5",
     "pdfjs-dist": "^3.11.174"
   },
