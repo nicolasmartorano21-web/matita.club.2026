@@ -87,7 +87,6 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     { label: 'ESCOLAR', cat: 'Escolar', icon: '✏️', route: '/escolar' },
     { label: 'OFICINA', cat: 'Oficina', icon: '💼', route: '/oficina' },
     { label: 'TECNOLOGIA', cat: 'Tecnología', icon: '🎧', route: '/tecnologia' },
-    { label: 'NOVEDADES', cat: 'Novedades', icon: '✨', route: '/novedades' },
     { label: 'OTROS', cat: 'Otros', icon: '🎁', route: '/otros' },
     { label: 'OFERTAS', cat: 'Ofertas', icon: '🏷️', route: '/ofertas' }
   ];
@@ -109,66 +108,70 @@ const Catalog: React.FC<CatalogProps> = ({ category }) => {
     <div className="space-y-8 animate-fadeIn pb-16 max-w-7xl mx-auto px-1">
       {/* HEADER INTERMEDIO */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <h2 className="text-4xl md:text-6xl font-matita font-bold text-[#f6a118] uppercase tracking-tighter">
+        <h2 className="text-3xl md:text-5xl font-matita font-bold text-[#f6a118] uppercase tracking-tighter leading-none">
           {getSectionTitle()}
         </h2>
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:max-w-2xl">
-          <div className="relative flex-grow">
-            <input
-              type="text"
-              placeholder="BUSCAR TESOROS... 🔍"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-6 py-3.5 rounded-full border-2 border-[#fadb31]/20 text-base font-matita shadow-sm focus:border-[#fadb31] outline-none transition-all placeholder:text-gray-300 bg-white uppercase"
-            />
-          </div>
-          <div className="relative shrink-0">
-             <select 
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="appearance-none w-full px-8 py-3.5 pr-12 rounded-full border-2 border-[#fadb31]/20 text-sm font-bold text-gray-500 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-sm uppercase"
-            >
-              <option value="recent">RECIENTES</option>
-              <option value="priceLow">MENOR PRECIO</option>
-              <option value="priceHigh">MAYOR PRECIO</option>
-              <option value="name">NOMBRE A-Z</option>
-            </select>
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-[#f6a118]">
-               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth={3}/></svg>
+        {category !== 'Novedades' && (
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:max-w-2xl">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                placeholder="Buscar tesoros... 🔍"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-5 py-3 rounded-full border-2 border-[#fadb31]/20 text-sm font-medium shadow-sm focus:border-[#fadb31] outline-none transition-all placeholder:text-gray-300 bg-white"
+              />
+            </div>
+            <div className="relative shrink-0">
+               <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="appearance-none w-full px-6 py-3 pr-10 rounded-full border-2 border-[#fadb31]/20 text-xs font-bold text-gray-500 bg-white outline-none cursor-pointer hover:border-[#fadb31] transition-colors shadow-sm uppercase"
+              >
+                <option value="recent">RECIENTES</option>
+                <option value="priceLow">MENOR PRECIO</option>
+                <option value="priceHigh">MAYOR PRECIO</option>
+                <option value="name">NOMBRE A-Z</option>
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#f6a118]">
+                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth={3}/></svg>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* CATEGORÍAS TIPO BURBUJA */}
-      <div className="w-full relative py-2 border-y border-[#fadb31]/10 bg-white/40">
-        <div className="flex overflow-x-auto gap-3 py-3 px-1 scrollbar-hide snap-x items-center whitespace-nowrap">
-           <button 
-             onClick={() => navigate('/catalog')}
-             className={`px-6 py-2 rounded-full text-xs font-bold transition-all border uppercase flex items-center gap-2 ${
-               category === 'Catalog' 
-               ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-md scale-105' 
-               : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
-             }`}
-           >
-             🌈 TODOS
-           </button>
-
-           {categoryList.map(item => (
+      {/* CATEGORÍAS TIPO BURBUJA - Ocultar en Novedades */}
+      {category !== 'Novedades' && (
+        <div className="w-full relative py-2 border-y border-[#fadb31]/10 bg-white/40">
+          <div className="flex overflow-x-auto gap-3 py-3 px-1 scrollbar-hide snap-x items-center whitespace-nowrap">
              <button 
-               key={item.cat}
-               onClick={() => navigate(item.route)}
-               className={`px-6 py-2 rounded-full text-xs font-bold transition-all border uppercase flex items-center gap-2 ${
-                 category === item.cat 
-                 ? 'bg-[#f6a118] text-white border-[#f6a118] shadow-md scale-105' 
-                 : 'bg-white text-gray-400 border-gray-100 hover:border-[#fadb31]'
+               onClick={() => navigate('/catalog')}
+               className={`px-5 py-2.5 rounded-t-2xl rounded-b-md text-[11px] font-bold transition-all border-2 border-b-4 uppercase flex items-center gap-1.5 ${
+                 category === 'Catalog' 
+                 ? 'bg-[#f6a118] text-white border-[#f6a118] border-b-[#d9820f] shadow-md -translate-y-1' 
+                 : 'bg-white text-gray-400 border-white border-b-gray-200 hover:border-[#fadb31] hover:-translate-y-0.5'
                }`}
              >
-               <span>{item.icon}</span> {item.label}
+               🌈 TODOS
              </button>
-           ))}
+
+             {categoryList.map(item => (
+               <button 
+                 key={item.cat}
+                 onClick={() => navigate(item.route)}
+                 className={`px-5 py-2.5 rounded-t-2xl rounded-b-md text-[11px] font-bold transition-all border-2 border-b-4 uppercase flex items-center gap-1.5 ${
+                   category === item.cat 
+                   ? 'bg-[#f6a118] text-white border-[#f6a118] border-b-[#d9820f] shadow-md -translate-y-1' 
+                   : 'bg-white text-gray-400 border-white border-b-gray-200 hover:border-[#fadb31] hover:-translate-y-0.5'
+                 }`}
+               >
+                 <span>{item.icon}</span> {item.label}
+               </button>
+             ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* GRID DE PRODUCTOS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8">

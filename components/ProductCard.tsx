@@ -13,7 +13,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addToCart, favorites, toggleFavorite } = useApp();
+  const { addToCart, favorites, toggleFavorite, showToast } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.color || '');
   const [activeImage, setActiveImage] = useState(0);
@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       addToCart({ product, quantity, selectedColor });
       setShowModal(false);
       setQuantity(1); // Reset para la próxima apertura
-      alert(`¡${quantity}x ${product.name} (${selectedColor}) añadido! 🌸`);
+      showToast('¡Agregado!', `¡${quantity}x ${product.name} (${selectedColor}) añadido! 🌸`, 'success');
     }
   };
 
@@ -45,7 +45,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* CARD PRINCIPAL */}
       <div 
         onClick={() => setShowModal(true)}
-        className="group bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-[#fadb31] flex flex-col h-full relative"
+        className="group bg-white rounded-[2rem] overflow-hidden shadow-matita hover:shadow-2xl transition-all duration-300 cursor-pointer border-[6px] border-white hover:-translate-y-1 flex flex-col h-full relative"
       >
         <button 
           onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
@@ -60,7 +60,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <img src={getImgUrl(product.images[0], 400)} className="w-full h-full object-contain transition-transform group-hover:scale-105" alt={product.name} />
           {isGlobalOutOfStock && (
             <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center">
-              <span className="bg-gray-800/80 text-white text-xs px-4 py-1 rounded-full font-bold uppercase tracking-widest">Agotado</span>
+              <span className="bg-red-400/90 text-white text-xs px-6 py-2 transform -rotate-3 font-bold uppercase tracking-widest shadow-md border-y-2 border-dashed border-red-300">Agotado</span>
             </div>
           )}
         </div>
@@ -90,9 +90,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <div className="w-full aspect-square bg-[#fdfaf6] rounded-[2rem] p-4 flex items-center justify-center overflow-hidden border-2 border-gray-50 mb-6">
                 <img src={getImgUrl(product.images[activeImage], 800)} className="max-w-full max-h-full object-contain" alt={product.name} />
               </div>
-              <div className="flex gap-2 mb-6">
+              <div className="flex gap-3 mb-6">
                 {product.images.map((_, i) => (
-                  <button key={i} onClick={() => setActiveImage(i)} className={`w-3 h-3 rounded-full transition-all ${activeImage === i ? 'bg-[#f6a118] w-8' : 'bg-gray-200'}`} />
+                  <button key={i} onClick={() => setActiveImage(i)} className={`h-3 rounded-full transition-all hover:scale-125 ${activeImage === i ? 'bg-[#f6a118] w-10 shadow-md' : 'bg-gray-200 w-3 hover:bg-gray-300'}`} />
                 ))}
               </div>
 
@@ -132,24 +132,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
               <div className="mb-6">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Elige tu variante:</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {product.colors.map(c => (
                     <button 
                       key={c.color} 
                       onClick={() => handleColorChange(c.color, c.stock)} 
-                      className={`relative p-3 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                      className={`relative p-4 rounded-3xl border-4 transition-all duration-300 flex flex-col items-center justify-center gap-1 active:scale-90 ${
                         c.stock <= 0 
-                          ? 'bg-gray-50 text-gray-300 border-gray-100 opacity-50' 
+                          ? 'bg-gray-50 text-gray-300 border-gray-100 opacity-50 cursor-not-allowed' 
                           : selectedColor === c.color 
-                            ? 'bg-white border-[#f6a118] shadow-md' 
-                            : 'bg-white border-transparent'
+                            ? 'bg-white border-[#fadb31] shadow-xl scale-105 -translate-y-1' 
+                            : 'bg-white border-transparent shadow-sm hover:border-[#fef9eb] hover:shadow-md hover:-translate-y-1'
                       }`}
                     >
                       {selectedColor === c.color && (
-                        <div className="absolute top-1 right-1 w-4 h-4 bg-[#f6a118] rounded-full flex items-center justify-center text-white text-[8px]">✓</div>
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#fadb31] text-gray-800 rounded-full flex items-center justify-center text-[10px] font-black shadow-lg animate-bounce">✓</div>
                       )}
-                      <span className={`text-sm font-bold ${selectedColor === c.color ? 'text-[#f6a118]' : 'text-gray-500'}`}>{c.color}</span>
-                      <span className="text-[8px] font-bold uppercase opacity-40">Stock: {c.stock}</span>
+                      <span className={`text-base font-black ${selectedColor === c.color ? 'text-[#f6a118]' : 'text-gray-500'}`}>{c.color}</span>
+                      <span className="text-[10px] font-bold uppercase opacity-60">Stock: {c.stock}</span>
                     </button>
                   ))}
                 </div>

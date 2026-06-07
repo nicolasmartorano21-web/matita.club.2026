@@ -1,26 +1,52 @@
 import React, { useState } from 'react';
 import { useApp } from '../App';
-import { Mail, Lock, User, ArrowLeft, Sparkles } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 type ViewMode = 'login' | 'register' | 'forgot';
 
 const LoginScreen: React.FC = () => {
-  const { setUser, logoUrl, supabase } = useApp();
+  const { setUser, logoUrl, supabase, showToast } = useApp();
   const [mode, setMode] = useState<ViewMode>('login');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
   });
 
+  const persistUser = (userData: object) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('matita_persisted_user', JSON.stringify(userData));
+    // Si elige no recordar, también borramos del localStorage por si existía
+    if (!rememberMe) localStorage.removeItem('matita_persisted_user');
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = formData.email.trim().toLowerCase();
     const password = formData.password;
 
+    // --- ACCESO ADMIN LOCAL (Bypass Supabase) ---
+    if (email === 'admin' || (email === 'admin@matita.com' && password === 'matita2026')) {
+      const adminUser = { 
+        id: 'admin_local', 
+        name: 'Administrador', 
+        email: 'admin@matita.com', 
+        points: 9999, 
+        isAdmin: true, 
+        isSocio: true 
+      };
+      setUser(adminUser);
+      persistUser(adminUser);
+      showToast('Acceso Admin', 'Ingresaste al Mando Central 👑', 'success');
+      return;
+    }
+    // ---------------------------------------------
+
     if (!email || (mode !== 'forgot' && !password)) {
-      return alert('Che, completá todos los datos ✍️');
+      return showToast('Datos Incompletos', 'Che, completá todos los datos ✍️', 'error');
     }
     
     setLoading(true);
@@ -46,7 +72,7 @@ const LoginScreen: React.FC = () => {
               is_admin: false
             }
           ]);
-          alert('¡Socio Registrado! ✨ Revisá tu Email para confirmar la cuenta.');
+          showToast('Registro Exitoso', '¡Socio Registrado! ✨ Revisá tu Email para confirmar la cuenta.', 'success');
           setMode('login');
         }
 
@@ -75,7 +101,7 @@ const LoginScreen: React.FC = () => {
               isSocio: profile.is_socio
             };
             setUser(userData);
-            localStorage.setItem('matita_persisted_user', JSON.stringify(userData));
+            persistUser(userData);
           }
         }
       } else if (mode === 'forgot') {
@@ -83,11 +109,11 @@ const LoginScreen: React.FC = () => {
           redirectTo: window.location.origin + '/login',
         });
         if (error) throw error;
-        alert('📧 ¡Email enviado! Seguí las instrucciones.');
+        showToast('Enviado', '📧 ¡Email enviado! Seguí las instrucciones.', 'success');
         setMode('login');
       }
     } catch (err: any) {
-      alert(err.message || 'Error de conexión ❌');
+      showToast('Error', err.message || 'Error de conexión ❌', 'error');
     } finally {
       setLoading(false);
     }
@@ -96,7 +122,7 @@ const LoginScreen: React.FC = () => {
   const handleGuestLogin = () => {
     const guestUser = { id: 'guest', name: 'Invitado', email: 'invitado@matita.com', points: 0, isAdmin: false, isSocio: false };
     setUser(guestUser);
-    localStorage.setItem('matita_persisted_user', JSON.stringify(guestUser));
+    persistUser(guestUser);
   };
 
   return (
@@ -107,7 +133,7 @@ const LoginScreen: React.FC = () => {
       <div className="bg-white rounded-[4rem] shadow-2xl max-w-xl w-full overflow-hidden border-[12px] border-white z-10 relative animate-fadeIn">
         
         <div className="matita-gradient-orange p-10 text-center text-white relative">
-          <div className="w-28 h-28 bg-white rounded-full mx-auto flex items-center justify-center shadow-2xl border-4 border-white mb-4 animate-float">
+          <div className="w-28 h-28 bg-white rounded-full mx-auto flex items-center justify-center shadow-2xl border-4 border-white mb-4">
             <img src={logoUrl} className="w-full h-full object-contain p-2" alt="Logo" />
           </div>
           <h1 className="text-5xl font-black uppercase tracking-tighter leading-none">
@@ -116,7 +142,7 @@ const LoginScreen: React.FC = () => {
           <p className="mt-2 font-bold opacity-90 uppercase tracking-[0.2em] text-[10px]">Librería & Tesoros <Sparkles size={10} className="inline"/></p>
         </div>
 
-        <div className="p-10 space-y-8 bg-white">
+        <div className="p-10 space-y-6 bg-white">
           {mode !== 'forgot' && (
             <div className="flex bg-gray-100 p-2 rounded-full border-2 border-gray-50 shadow-inner">
               <button onClick={() => setMode('login')} className={`flex-1 py-3 rounded-full text-xl font-black transition-all uppercase ${mode === 'login' ? 'bg-white shadow-md text-[#f6a118]' : 'text-gray-400'}`}>Entrar</button>
@@ -124,9 +150,9 @@ const LoginScreen: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleAuth} className="space-y-5">
+          <form onSubmit={handleAuth} className="space-y-4">
             {mode === 'register' && (
-              <div className="relative animate-slideUp">
+              <div className="relative animate-fadeIn">
                 <User className="absolute left-5 top-5 text-gray-300" />
                 <input 
                   type="text" required placeholder="TU NOMBRE" 
@@ -149,10 +175,38 @@ const LoginScreen: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-5 top-5 text-gray-300" />
                 <input 
-                  type="password" required placeholder="TU CLAVE" 
-                  className="w-full text-2xl p-5 pl-14 bg-[#fef9eb] rounded-3xl outline-none font-bold uppercase border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner"
+                  type={showPassword ? 'text' : 'password'}
+                  required placeholder="TU CLAVE" 
+                  className="w-full text-2xl p-5 pl-14 pr-16 bg-[#fef9eb] rounded-3xl outline-none font-bold uppercase border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner"
                   value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} 
                 />
+                {/* Toggle mostrar/ocultar contraseña */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-5 top-5 text-gray-300 hover:text-[#f6a118] transition-colors p-1"
+                  title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                </button>
+              </div>
+            )}
+
+            {/* RECORDARME */}
+            {mode === 'login' && (
+              <div className="flex items-center gap-3 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => setRememberMe(!rememberMe)}
+                  className={`w-12 h-6 rounded-full flex items-center px-0.5 transition-all duration-300 border-2 ${
+                    rememberMe ? 'bg-[#f6a118] border-[#f6a118]' : 'bg-gray-100 border-gray-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300 ${rememberMe ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-wide select-none">
+                  Recordarme en este dispositivo
+                </span>
               </div>
             )}
 
@@ -171,7 +225,7 @@ const LoginScreen: React.FC = () => {
               )}
             </div>
 
-            <div className="relative flex justify-center items-center py-4">
+            <div className="relative flex justify-center items-center py-3">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-gray-100"></div></div>
               <span className="relative px-4 bg-white text-gray-300 font-black uppercase text-[10px] tracking-widest">O CONTINUAR COMO</span>
             </div>
@@ -186,4 +240,7 @@ const LoginScreen: React.FC = () => {
   );
 };
 
+
 export default LoginScreen;
+
+

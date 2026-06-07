@@ -39,43 +39,30 @@ const getImgUrl = (id: string, w = 600) => {
 // --- COMPONENTE PRINCIPAL: GESTIÓN MATITA ---
 const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
+  const { user } = useApp();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'sales' | 'socios' | 'ideas' | 'design' | 'carousel'>('dashboard');
 
-  const handleAdminAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === 'matita2026') setIsAuthenticated(true);
-    else alert('Che, la contraseña es incorrecta ❌');
-  };
+  useEffect(() => {
+    if (user && !user.isAdmin) {
+      alert('Che, no tenés permisos de administrador para entrar acá 🛡️');
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   // Pantalla de Login de Admin
-  if (!isAuthenticated) {
+  if (!user || !user.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fdfaf6] p-6 font-matita">
         <div className="max-w-md w-full bg-white rounded-[4rem] p-16 shadow-2xl border-[12px] border-white text-center space-y-12 animate-fadeIn relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-3 matita-gradient-orange"></div>
-          <div className="text-9xl animate-float">👑</div>
+          <div className="text-9xl animate-float">🔒</div>
           <div className="space-y-4">
-            <h2 className="text-5xl font-black text-gray-800 uppercase tracking-tighter">Panel Maestro</h2>
-            <p className="text-[#f6a118] font-bold uppercase text-[10px] tracking-[0.4em]">Solo personal Matita autorizado</p>
+            <h2 className="text-5xl font-black text-gray-800 uppercase tracking-tighter">Acceso Denegado</h2>
+            <p className="text-red-500 font-bold uppercase text-[10px] tracking-[0.4em]">Solo personal Matita autorizado</p>
           </div>
-          <form onSubmit={handleAdminAuth} className="space-y-8">
-            <div className="relative">
-              <input
-                type="password"
-                placeholder="CLAVE MATITA"
-                className="w-full text-3xl text-center shadow-inner py-7 bg-[#fef9eb] rounded-3xl outline-none uppercase font-black border-4 border-transparent focus:border-[#fadb31] transition-all"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <button className="w-full py-8 matita-gradient-orange text-white rounded-[2.5rem] text-4xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase border-b-8 border-orange-700">
-              ENTRAR 🚪
-            </button>
-          </form>
-          <button onClick={() => navigate('/')} className="text-gray-300 font-bold uppercase underline text-[10px] hover:text-gray-500 transition-colors">Volver a la Tienda</button>
+          <button onClick={() => navigate('/')} className="w-full py-8 matita-gradient-orange text-white rounded-[2.5rem] text-4xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all uppercase border-b-8 border-orange-700">
+            VOLVER AL INICIO 🚪
+          </button>
         </div>
       </div>
     );
@@ -111,7 +98,7 @@ const AdminPanel: React.FC = () => {
             </button>
           ))}
           <div className="w-px h-12 bg-gray-100 mx-2 hidden xl:block"></div>
-          <button onClick={() => setIsAuthenticated(false)} className="px-8 py-5 bg-red-50 text-red-400 rounded-[1.8rem] font-black uppercase hover:bg-red-500 hover:text-white transition-all shadow-md">
+          <button onClick={() => navigate('/')} className="px-8 py-5 bg-red-50 text-red-400 rounded-[1.8rem] font-black uppercase hover:bg-red-500 hover:text-white transition-all shadow-md" title="Volver a la tienda">
              🚪
           </button>
         </div>
@@ -508,27 +495,38 @@ const InventoryManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-6">
           {products.map(p => (
-            <div key={p.id} className="bg-white p-6 rounded-[3.5rem] border-8 border-gray-50 shadow-sm hover:border-[#fadb31] transition-all group flex flex-col relative overflow-hidden">
-              <div className="aspect-square rounded-[2rem] overflow-hidden mb-6 bg-gray-50 relative border-4 border-white shadow-inner">
-                <img src={getImgUrl(p.images[0], 400)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button onClick={() => { setEditingProduct(p); setFormMode('edit'); }} className="p-3 bg-white rounded-full shadow-xl text-blue-400 hover:scale-110 active:scale-90 transition-all"><Edit3 size={20}/></button>
-                   <button onClick={async () => { if(confirm('¿Borrar este tesoro?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(); } }} className="p-3 bg-white rounded-full shadow-xl text-red-400 hover:scale-110 active:scale-90 transition-all"><Trash2 size={20}/></button>
-                </div>
+            <div key={p.id} className="bg-white p-4 rounded-[2.5rem] border-4 border-gray-50 shadow-sm hover:border-[#fadb31] transition-all group flex flex-col relative overflow-hidden">
+              <div className="aspect-square rounded-[1.5rem] overflow-hidden mb-4 bg-gray-50 relative border-2 border-white shadow-inner">
+                <img src={getImgUrl(p.images[0], 400)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
-              <p className="text-[10px] font-black text-[#fadb31] uppercase mb-1 tracking-widest">{p.category}</p>
-              <h4 className="text-sm font-black uppercase text-gray-800 truncate mb-3">{p.name}</h4>
-              <div className="flex justify-between items-end mt-auto pt-4 border-t-2 border-gray-50">
+              <p className="text-[9px] font-black text-[#fadb31] uppercase mb-1 tracking-widest">{p.category}</p>
+              <h4 className="text-xs font-black uppercase text-gray-800 truncate mb-2">{p.name}</h4>
+              <div className="flex justify-between items-end mt-auto pt-3 border-t-2 border-gray-50">
                 <div>
-                  <p className="text-3xl font-black text-[#f6a118] leading-none">${p.price.toLocaleString()}</p>
-                  {p.oldPrice > 0 && <p className="text-[10px] font-bold text-gray-300 line-through">${p.oldPrice.toLocaleString()}</p>}
+                  <p className="text-xl font-black text-[#f6a118] leading-none">${p.price.toLocaleString()}</p>
+                  {p.oldPrice > 0 && <p className="text-[9px] font-bold text-gray-300 line-through">${p.oldPrice.toLocaleString()}</p>}
                 </div>
                 <div className="text-right">
-                   <p className="text-lg font-black text-gray-800 leading-none">{p.colors?.reduce((a,b) => a + Number(b.stock), 0)}</p>
-                   <p className="text-[8px] font-black text-gray-200 uppercase tracking-widest">STOCK</p>
+                   <p className="text-sm font-black text-gray-600 leading-none">{p.colors?.reduce((a,b) => a + Number(b.stock), 0)}</p>
+                   <p className="text-[7px] font-black text-gray-300 uppercase tracking-widest">STOCK</p>
                 </div>
+              </div>
+              {/* Botones siempre visibles */}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => { setEditingProduct(p); setFormMode('edit'); }}
+                  className="flex-1 py-2 bg-blue-50 text-blue-400 rounded-2xl text-xs font-black uppercase flex items-center justify-center gap-1 hover:bg-blue-400 hover:text-white transition-all active:scale-95"
+                >
+                  <Edit3 size={14}/> Editar
+                </button>
+                <button
+                  onClick={async () => { if(confirm('¿Borrar este tesoro?')) { await supabase.from('products').delete().eq('id', p.id); fetchProducts(); } }}
+                  className="py-2 px-3 bg-red-50 text-red-300 rounded-2xl text-xs font-black flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                >
+                  <Trash2 size={14}/>
+                </button>
               </div>
             </div>
           ))}
@@ -770,29 +768,69 @@ const SociosManager: React.FC = () => {
 const SalesManager: React.FC = () => {
   const { supabase } = useApp();
   const [sales, setSales] = useState<any[]>([]);
-  useEffect(() => { const f = async () => { const { data } = await supabase.from('sales').select('*').order('created_at', { ascending: false }); if (data) setSales(data); }; f(); }, [supabase]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (data) setSales(data);
+      setLoading(false);
+    };
+    fetchSales();
+  }, [supabase]);
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-24 gap-6">
+      <div className="w-14 h-14 border-4 border-gray-100 border-t-[#f6a118] rounded-full animate-spin"></div>
+      <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">Cargando ventas...</p>
+    </div>
+  );
+
   return (
-    <div className="space-y-16 animate-fadeIn text-left">
-      <h3 className="text-5xl font-black uppercase tracking-tighter border-b-8 border-gray-50 pb-8">Bitácora Real de Ventas 💸</h3>
-      <div className="grid gap-8">
-        {sales.map(s => (
-          <div key={s.id} className="bg-gray-50 p-12 rounded-[5rem] border-[10px] border-white shadow-sm flex flex-col lg:flex-row justify-between items-center group transition-all hover:bg-white hover:shadow-2xl">
-             <div className="flex items-center gap-10">
-                <div className="w-28 h-28 bg-white rounded-[3.5rem] flex items-center justify-center text-5xl shadow-inner group-hover:bg-[#fef9eb] transition-colors shadow-lg">🛍️</div>
-                <div>
-                   <p className="text-4xl font-black uppercase text-gray-800 leading-none mb-3">#{s.id.slice(0, 8)} — {s.user_name || 'Anónimo'}</p>
-                   <div className="flex items-center gap-5 text-xl text-gray-400 font-bold uppercase tracking-widest">
-                     <FileText size={22}/> {new Date(s.created_at).toLocaleString('es-AR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                   </div>
-                </div>
-             </div>
-             <div className="text-right mt-10 lg:mt-0">
-                <p className="text-8xl font-black text-[#f6a118] leading-none mb-3 tracking-tighter">${s.total.toLocaleString()}</p>
-                <div className="bg-green-100 text-green-500 px-8 py-3 rounded-full font-black text-xs uppercase shadow-sm inline-flex items-center gap-2">PAGADO CON ÉXITO ✅</div>
-             </div>
-          </div>
-        ))}
+    <div className="space-y-10 animate-fadeIn text-left">
+      <div className="flex items-center justify-between border-b-4 border-gray-50 pb-8">
+        <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">Bitácora de Ventas 💸</h3>
+        <span className="bg-[#fef9eb] text-[#f6a118] font-black text-sm px-6 py-3 rounded-full border-2 border-[#fadb31]/20">
+          {sales.length} operaciones
+        </span>
       </div>
+
+      {sales.length === 0 ? (
+        <div className="text-center py-24 flex flex-col items-center gap-6 opacity-50">
+          <div className="text-8xl">📄</div>
+          <p className="text-2xl font-bold text-gray-400 uppercase tracking-tighter">No hay ventas registradas aún</p>
+          <p className="text-sm font-bold text-gray-300 uppercase tracking-widest max-w-md">
+            Las ventas aparecen aquí automáticamente cuando los clientes confirman un pedido desde el carrito.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {sales.map(s => (
+            <div key={s.id} className="bg-gray-50 p-8 md:p-12 rounded-[4rem] border-[6px] border-white shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 hover:bg-white hover:shadow-xl transition-all">
+               <div className="flex items-center gap-8">
+                  <div className="w-20 h-20 bg-white rounded-[2.5rem] flex items-center justify-center text-4xl shadow-md shrink-0">🛍️</div>
+                  <div>
+                     <p className="text-2xl font-black uppercase text-gray-800 leading-none mb-2">#{(s.id || '').toString().slice(0, 8)} — <span className="text-[#f6a118]">{s.user_name || 'Anónimo'}</span></p>
+                     <p className="text-sm font-bold text-gray-400 uppercase tracking-wide">
+                       {new Date(s.created_at).toLocaleString('es-AR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                     </p>
+                     {s.category_summary && (
+                       <p className="text-xs text-gray-300 font-bold mt-1 uppercase">📦 {s.category_summary}</p>
+                     )}
+                  </div>
+               </div>
+               <div className="flex items-center gap-6 ml-auto">
+                  <p className="text-5xl font-black text-[#f6a118] tracking-tighter">${(s.total || 0).toLocaleString()}</p>
+                  <span className="bg-green-100 text-green-600 px-5 py-2 rounded-full font-black text-[10px] uppercase tracking-widest whitespace-nowrap">✅ Confirmado</span>
+               </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

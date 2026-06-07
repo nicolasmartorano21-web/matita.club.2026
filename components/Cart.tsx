@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../App';
 import { CartItem, User, ColorStock } from '../types';
+import { triggerConfetti } from '../utils/confetti';
 
 /**
  * getImgUrl: Utilidad para procesar imágenes a través de Cloudinary.
@@ -42,13 +43,24 @@ const PAYMENT_METHODS = [
 ];
 
 const Cart: React.FC = () => {
-  const { cart, setCart, removeFromCart, clearCart, user, supabase } = useApp();
+  const { cart, removeFromCart, clearCart, user, setUser, supabase, showToast } = useApp();
   
   const [isOpen, setIsOpen] = useState(false);
   const [isGift, setIsGift] = useState(false);
   const [usePoints, setUsePoints] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cartWiggle, setCartWiggle] = useState(false);
+  const prevCartLength = useRef(cart.length);
+
+  // Disparar animación wiggle cada vez que se agrega un ítem al carrito
+  useEffect(() => {
+    if (cart.length > prevCartLength.current) {
+      setCartWiggle(true);
+      setTimeout(() => setCartWiggle(false), 600);
+    }
+    prevCartLength.current = cart.length;
+  }, [cart.length]);
 
   const GIFT_WRAP_PRICE = 2000;
   const POINTS_VALUATION = 0.5;
@@ -108,8 +120,21 @@ const Cart: React.FC = () => {
         created_at: new Date().toISOString()
       });
 
-      if (user && usePoints && summary.pointsToDeduct > 0) {
-        await supabase.from('users').update({ points: Math.max(0, user.points - summary.pointsToDeduct) }).eq('id', user.id);
+      if (user && user.isSocio) {
+        const earnedPoints = cart.reduce((sum, item) => sum + ((item.product.points || 0) * item.quantity), 0);
+        const deductedPoints = (usePoints && summary.pointsToDeduct > 0) ? summary.pointsToDeduct : 0;
+        const newPoints = Math.max(0, user.points + earnedPoints - deductedPoints);
+
+        const { error: pointsError } = await supabase
+          .from('users')
+          .update({ points: newPoints })
+          .eq('id', user.id);
+
+        if (!pointsError) {
+          const updatedUser = { ...user, points: newPoints };
+          setUser(updatedUser);
+          localStorage.setItem('matita_persisted_user', JSON.stringify(updatedUser));
+        }
       }
 
       const detail = cart.map(i => `• *${i.product.name}* (${i.selectedColor}) x${i.quantity}`).join('\n');
@@ -127,10 +152,11 @@ const Cart: React.FC = () => {
       
       clearCart();
       setIsOpen(false);
-      alert("¡Reserva confirmada con éxito! ✨");
+      triggerConfetti();
+      showToast('¡Reserva Confirmada! 🎉', '¡Tu pedido está en camino! Revisá WhatsApp para confirmar.', 'success');
 
     } catch (err: any) {
-      alert("Error: " + err.message);
+      showToast('Error al procesar', err.message || 'Algo salió mal. Intentá de nuevo.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -140,7 +166,7 @@ const Cart: React.FC = () => {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="w-16 h-16 md:w-20 md:h-20 bg-[#ea7e9c] text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white hover:scale-110 active:scale-95 transition-all relative group z-[90]"
+        className={`w-16 h-16 md:w-20 md:h-20 bg-[#ea7e9c] text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white hover:scale-110 active:scale-95 transition-all relative group z-[90] ${cartWiggle ? 'animate-wiggle' : ''}`}
       >
         <svg className="w-8 h-8 md:w-10 md:h-10 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
