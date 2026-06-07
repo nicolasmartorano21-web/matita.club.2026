@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Gochi+Hand&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Gochi+Hand&family=Caveat:wght@400..700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --matita-beige: #fef9eb;
@@ -16,71 +16,86 @@
             --matita-yellow: #fadb31;
             --matita-pink: #ea7e9c;
             --matita-cream: #fffaf0;
+            --sticker-shadow: 0 8px 24px -4px rgba(246,161,24,0.18), 0 0 0 5px white;
+            --radius-card: 1.5rem;
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        @font-face {
-            font-family: 'Segoe Print';
-            src: local('Segoe Print'), local('SegoePrint'), url('https://fonts.cdnfonts.com/s/14870/SegoePrint.woff') format('woff');
-        }
+        *, *::before, *::after { box-sizing: border-box; }
         body {
-            font-family: 'Segoe Print', 'Patrick Hand', cursive;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
             background-color: var(--matita-beige);
-            background-image: 
-                linear-gradient(rgba(255, 250, 240, 0.8), rgba(255, 250, 240, 0.8)),
-                radial-gradient(var(--matita-yellow) 0.5px, transparent 0.5px);
-            background-size: 100% 100%, 30px 30px;
-            color: #4a4a4a;
-            font-size: 1.1rem;
+            background-image: radial-gradient(rgba(0,0,0,0.055) 1.5px, transparent 1.5px);
+            background-size: 26px 26px;
+            color: #3d3d3d;
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
-        .font-matita {
-            font-family: 'Segoe Print', 'Patrick Hand', cursive;
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Patrick Hand', cursive;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
         }
-        .font-logo {
-            font-family: 'Gochi Hand', cursive;
-        }
-        .matita-gradient-orange {
-            background: linear-gradient(135deg, var(--matita-orange), var(--matita-yellow));
-        }
-        .matita-gradient-pink {
-            background: linear-gradient(135deg, var(--matita-pink), var(--matita-yellow));
-        }
-        .shadow-matita {
-            box-shadow: 0 15px 35px -5px rgba(246, 161, 24, 0.2), 0 10px 15px -10px rgba(246, 161, 24, 0.1);
-        }
+        .font-matita { font-family: 'Patrick Hand', cursive; }
+        .font-logo   { font-family: 'Gochi Hand', cursive; }
+
+        /* Gradientes */
+        .matita-gradient-orange { background: linear-gradient(135deg, #f6a118 0%, #fadb31 100%); }
+        .matita-gradient-pink   { background: linear-gradient(135deg, #ea7e9c 0%, #fadb31 100%); }
+
+        /* Sombras */
+        .shadow-matita { box-shadow: 0 10px 30px -6px rgba(246,161,24,0.22), 0 4px 10px -4px rgba(246,161,24,0.12); }
+        .shadow-card   { box-shadow: var(--sticker-shadow); }
+
+        /* Inputs y selects — estilo papelería limpia */
         input, select, textarea {
-            background-color: #ffffff;
-            border-radius: 1.2rem;
-            padding: 0.8rem 1.2rem;
-            border: 2px solid #fadb31;
-            font-family: 'Segoe Print', 'Patrick Hand', cursive;
-            font-size: 1.1rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #3d3d3d;
+            background: #ffffff;
+            border: 2px solid #e8e0cc;
+            border-radius: 999px;
+            padding: 0.65rem 1.25rem;
+            transition: var(--transition-smooth);
+            outline: none;
         }
-        button {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--matita-yellow);
+            box-shadow: 0 0 0 3px rgba(250,219,49,0.18);
         }
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
+        textarea { border-radius: 1.2rem; }
+
+        /* Botones base */
+        button { transition: var(--transition-smooth); }
+
+        /* Scrollbar oculto */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animaciones */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .animate-fadeIn {
-            animation: fadeIn 0.5s ease-out forwards;
+        @keyframes slideUp {
+            from { transform: translateX(100%); }
+            to   { transform: translateX(0); }
         }
         @keyframes wiggle {
-            0%   { transform: rotate(0deg) scale(1); }
+            0%   { transform: rotate(0deg)   scale(1); }
             15%  { transform: rotate(-18deg) scale(1.15); }
-            30%  { transform: rotate(18deg) scale(1.15); }
-            45%  { transform: rotate(-12deg) scale(1.1); }
-            60%  { transform: rotate(12deg) scale(1.1); }
-            75%  { transform: rotate(-6deg) scale(1.05); }
-            90%  { transform: rotate(6deg) scale(1.05); }
-            100% { transform: rotate(0deg) scale(1); }
+            30%  { transform: rotate(18deg)  scale(1.15); }
+            45%  { transform: rotate(-10deg) scale(1.08); }
+            60%  { transform: rotate(10deg)  scale(1.08); }
+            80%  { transform: rotate(-4deg)  scale(1.03); }
+            100% { transform: rotate(0deg)   scale(1); }
         }
-        .animate-wiggle {
-            animation: wiggle 0.6s ease-in-out;
-        }
+        .animate-fadeIn  { animation: fadeIn  0.45s ease-out forwards; }
+        .animate-slideUp { animation: slideUp 0.35s ease-out forwards; }
+        .animate-wiggle  { animation: wiggle  0.6s ease-in-out; }
+
         body { overflow-x: hidden; }
     </style>
 <script type="importmap">

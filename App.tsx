@@ -61,6 +61,21 @@ const App: React.FC = () => {
 
   const clearCart = useCallback(() => setCart([]), []);
 
+  // Bloquear el botón "Atrás" del navegador para que no salga de la app
+  useEffect(() => {
+    // Empujar un estado extra al historial para tener dónde "atrapar" el back
+    window.history.pushState({ matita: true }, '', window.location.href);
+
+    const handlePopState = () => {
+      // Cuando el usuario presiona Atrás, re-empujamos el estado para quedarnos
+      window.history.pushState({ matita: true }, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+
   useEffect(() => {
     const initApp = async () => {
       const savedUser = localStorage.getItem('matita_persisted_user');
