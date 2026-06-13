@@ -1,0 +1,246 @@
+import React, { useState } from 'react';
+import { useApp } from '../App';
+import { Mail, Lock, User, ArrowLeft, Sparkles, Eye, EyeOff } from 'lucide-react';
+
+type ViewMode = 'login' | 'register' | 'forgot';
+
+const LoginScreen: React.FC = () => {
+  const { setUser, logoUrl, supabase, showToast } = useApp();
+  const [mode, setMode] = useState<ViewMode>('login');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+  });
+
+  const persistUser = (userData: object) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('matita_persisted_user', JSON.stringify(userData));
+    // Si elige no recordar, también borramos del localStorage por si existía
+    if (!rememberMe) localStorage.removeItem('matita_persisted_user');
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+
+    // --- ACCESO ADMIN LOCAL (Bypass Supabase) ---
+    if (email === 'admin' || (email === 'admin@matita.com' && password === 'matita2026')) {
+      const adminUser = { 
+        id: 'admin_local', 
+        name: 'Administrador', 
+        email: 'admin@matita.com', 
+        points: 9999, 
+        isAdmin: true, 
+        isSocio: true 
+      };
+      setUser(adminUser);
+      persistUser(adminUser);
+      showToast('Acceso Admin', 'Ingresaste al Mando Central 👑', 'success');
+      return;
+    }
+    // ---------------------------------------------
+
+    if (!email || (mode !== 'forgot' && !password)) {
+      return showToast('Datos Incompletos', 'Che, completá todos los datos ✍️', 'error');
+    }
+    
+    setLoading(true);
+
+    try {
+      if (mode === 'register') {
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: formData.name } }
+        });
+
+        if (authError) throw authError;
+
+        if (authData.user) {
+          await supabase.from('users').insert([
+            { 
+              id: authData.user.id, 
+              name: formData.name || 'Nuevo Socio', 
+              email: email, 
+              points: 50, 
+              is_socio: true,
+              is_admin: false
+            }
+          ]);
+          showToast('Registro Exitoso', '¡Socio Registrado! ✨ Revisá tu Email para confirmar la cuenta.', 'success');
+          setMode('login');
+        }
+
+      } else if (mode === 'login') {
+        const { data: logData, error: logError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (logError) throw logError;
+
+        if (logData.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', logData.user.id)
+            .single();
+
+          if (profile) {
+            const userData = {
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              points: profile.points,
+              isAdmin: profile.is_admin,
+              isSocio: profile.is_socio
+            };
+            setUser(userData);
+            persistUser(userData);
+          }
+        }
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '/login',
+        });
+        if (error) throw error;
+        showToast('Enviado', '📧 ¡Email enviado! Seguí las instrucciones.', 'success');
+        setMode('login');
+      }
+    } catch (err: any) {
+      showToast('Error', err.message || 'Error de conexión ❌', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuestLogin = () => {
+    const guestUser = { id: 'guest', name: 'Invitado', email: 'invitado@matita.com', points: 0, isAdmin: false, isSocio: false };
+    setUser(guestUser);
+    persistUser(guestUser);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#fdfaf6] flex items-center justify-center p-4 relative overflow-hidden font-matita">
+      <div className="absolute -top-32 -left-32 w-[30rem] h-[30rem] bg-[#fadb31]/10 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-32 -right-32 w-[30rem] h-[30rem] bg-[#ea7e9c]/10 rounded-full blur-3xl"></div>
+
+      <div className="bg-white rounded-[4rem] shadow-2xl max-w-xl w-full overflow-hidden border-[12px] border-white z-10 relative animate-fadeIn">
+        
+        <div className="matita-gradient-orange p-10 text-center text-white relative">
+          <div className="w-28 h-28 bg-white rounded-full mx-auto flex items-center justify-center shadow-2xl border-4 border-white mb-4">
+            <img src={logoUrl} className="w-full h-full object-contain p-2" alt="Logo" />
+          </div>
+          <h1 className="text-5xl font-black uppercase tracking-tighter leading-none">
+            {mode === 'forgot' ? 'Recuperar' : 'Club Matita'}
+          </h1>
+          <p className="mt-2 font-bold opacity-90 uppercase tracking-[0.2em] text-[10px]">Librería & Tesoros <Sparkles size={10} className="inline"/></p>
+        </div>
+
+        <div className="p-10 space-y-6 bg-white">
+          {mode !== 'forgot' && (
+            <div className="flex bg-gray-100 p-2 rounded-full border-2 border-gray-50 shadow-inner">
+              <button onClick={() => setMode('login')} className={`flex-1 py-3 rounded-full text-xl font-black transition-all uppercase ${mode === 'login' ? 'bg-white shadow-md text-[#f6a118]' : 'text-gray-400'}`}>Entrar</button>
+              <button onClick={() => setMode('register')} className={`flex-1 py-3 rounded-full text-xl font-black transition-all uppercase ${mode === 'register' ? 'bg-white shadow-md text-[#f6a118]' : 'text-gray-400'}`}>Unirme</button>
+            </div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            {mode === 'register' && (
+              <div className="relative animate-fadeIn">
+                <User className="absolute left-5 top-5 text-gray-300" />
+                <input 
+                  type="text" required placeholder="TU NOMBRE" 
+                  className="w-full text-2xl p-5 pl-14 bg-[#fef9eb] rounded-3xl outline-none font-bold uppercase border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner"
+                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} 
+                />
+              </div>
+            )}
+            
+            <div className="relative">
+              <Mail className="absolute left-5 top-5 text-gray-300" />
+              <input 
+                type="email" required placeholder="TU EMAIL" 
+                className="w-full text-2xl p-5 pl-14 bg-[#fef9eb] rounded-3xl outline-none font-bold uppercase border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner"
+                value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} 
+              />
+            </div>
+            
+            {mode !== 'forgot' && (
+              <div className="relative">
+                <Lock className="absolute left-5 top-5 text-gray-300" />
+                <input 
+                  type={showPassword ? 'text' : 'password'}
+                  required placeholder="TU CLAVE" 
+                  className="w-full text-2xl p-5 pl-14 pr-16 bg-[#fef9eb] rounded-3xl outline-none font-bold uppercase border-4 border-transparent focus:border-[#fadb31] transition-all shadow-inner"
+                  value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} 
+                />
+                {/* Toggle mostrar/ocultar contraseña */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-5 top-5 text-gray-300 hover:text-[#f6a118] transition-colors p-1"
+                  title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                </button>
+              </div>
+            )}
+
+            {/* RECORDARME */}
+            {mode === 'login' && (
+              <div className="flex items-center gap-3 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => setRememberMe(!rememberMe)}
+                  className={`w-12 h-6 rounded-full flex items-center px-0.5 transition-all duration-300 border-2 ${
+                    rememberMe ? 'bg-[#f6a118] border-[#f6a118]' : 'bg-gray-100 border-gray-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300 ${rememberMe ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-wide select-none">
+                  Recordarme en este dispositivo
+                </span>
+              </div>
+            )}
+
+            <button 
+              type="submit" disabled={loading} 
+              className="w-full py-6 matita-gradient-orange text-white rounded-[2rem] text-3xl font-black shadow-xl hover:scale-[1.03] active:scale-95 transition-all disabled:opacity-50 uppercase tracking-tighter border-b-8 border-orange-700"
+            >
+              {loading ? '...' : mode === 'login' ? 'Entrar ✨' : mode === 'register' ? 'Registrar 🌸' : 'Enviar Mail 📧'}
+            </button>
+            
+            <div className="flex justify-between items-center px-2">
+              {mode === 'login' ? (
+                <button type="button" onClick={() => setMode('forgot')} className="text-gray-400 font-bold uppercase text-xs hover:text-[#ea7e9c]">¿Olvidaste tu clave?</button>
+              ) : (
+                <button type="button" onClick={() => setMode('login')} className="flex items-center gap-2 text-gray-400 font-bold uppercase text-xs hover:text-[#f6a118]"><ArrowLeft size={14}/> Volver</button>
+              )}
+            </div>
+
+            <div className="relative flex justify-center items-center py-3">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-gray-100"></div></div>
+              <span className="relative px-4 bg-white text-gray-300 font-black uppercase text-[10px] tracking-widest">O CONTINUAR COMO</span>
+            </div>
+
+            <button type="button" onClick={handleGuestLogin} className="w-full py-4 bg-white text-gray-400 rounded-[1.5rem] text-xl font-bold border-4 border-gray-100 hover:border-[#fadb31] hover:text-[#f6a118] transition-all uppercase shadow-md">
+              Invitado 🌈
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+export default LoginScreen;
+
+
