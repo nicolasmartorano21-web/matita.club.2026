@@ -451,7 +451,7 @@ const InventoryManager: React.FC = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
     setIsUploading(true);
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files) as File[];
     const uploadedIds: string[] = [];
     for (const file of files) {
       const formData = new FormData();
